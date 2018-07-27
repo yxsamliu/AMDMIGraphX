@@ -107,6 +107,13 @@ struct batch_norm_inference
 {
     double epsilon = 1.0e-6;
 
+    enum miopen_batch_norm_mode_t {
+        per_activation,
+        spatial
+    };
+
+    miopen_batch_norm_mode_t mode = per_activation;
+
     std::string name() const { return "batch_norm_inference"; }
 
     shape compute_shape(std::vector<shape> inputs) const

@@ -15,6 +15,47 @@
 namespace migraph {
 namespace gpu {
 
+struct miopen_batch_norm_inference
+{
+    batch_norm_inference op;
+
+    std::string name() const { return "gpu::batch_norm_inference"; }
+
+    shape compute_shape(std::vector<shape> inputs) const
+    {
+        check_shapes{inputs, *this}.has(6);
+        return op.compute_shape({inputs.at(0), inputs.at(1), inputs.at(2), inputs.at(3), inputs.at(4)});
+    }
+
+    argument compute(context& ctx, shape, std::vector<argument> args) const
+    {
+        auto x_desc = make_tensor(args[0].get_shape());
+        auto y_desc = make_tensor(args[5].get_shape());
+        auto bn_desc = make_tensor(args[1].get_shape());
+
+        auto bn_mean = args[1];
+        auto bn_variance = args[2];
+        auto bn_scale = args[3];
+        auto bn_bias = args[4];
+
+        float alpha = 1.0f, beta = 0.0f;
+        miopenBatchNormalizationForwardInference(ctx.handle.get(), miopenBatchNormMode_t(op.mode),
+                                         &alpha,
+                                         &beta,
+                                         x_desc.get(),
+                                         args[0].implicit(),
+                                         y_desc.get(),
+                                         args[5].implicit(),
+                                         bn_desc.get(),
+                                         bn_scale.implicit(),
+                                         bn_bias.implicit(),
+                                         bn_mean.implicit(),
+                                         bn_variance.implicit(),
+                                         op.epsilon);
+        return args[5];
+    }
+};
+
 struct miopen_convolution
 {
     convolution op;
