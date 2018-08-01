@@ -241,13 +241,12 @@ struct cpu_gemm
         auto k = output_shape.lens()[0];
 
         auto alpha = 1.0f;
-        auto beta = 0.0f;
-        auto a = args[0].implicit();
-        auto b = args[1].implicit();
-        auto c = result.implicit();
-        cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
-            m, n, k, alpha, 
-            a, k, b, n, beta, c, n);
+        auto beta  = 0.0f;
+        auto a     = args[0].implicit();
+        auto b     = args[1].implicit();
+        auto c     = result.implicit();
+        cblas_sgemm(
+            CblasRowMajor, CblasNoTrans, CblasNoTrans, m, n, k, alpha, a, k, b, n, beta, c, n);
         return result;
     }
 };
