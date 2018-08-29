@@ -51,12 +51,9 @@ auto nary_nonstandard_impl(F f, argument result, Arguments... args)
     });
 }
 
-template<class F>
-void trinary_broadcast_vec_impl(F f,
-                               const argument& result,
-                               const argument& arg1,
-                               const argument& arg2,
-                               const argument& arg3)
+template <class F>
+void trinary_broadcast_vec_impl(
+    F f, const argument& result, const argument& arg1, const argument& arg2, const argument& arg3)
 {
     const auto& output_shape = result.get_shape();
     const auto& b_shape      = arg3.get_shape();
@@ -110,7 +107,8 @@ void trinary_broadcast_vec_impl(F f,
 }
 
 template <class F>
-void trinary_broadcast_impl(F f, const argument& result, const argument& arg1, const argument& arg2, const argument& arg3)
+void trinary_broadcast_impl(
+    F f, const argument& result, const argument& arg1, const argument& arg2, const argument& arg3)
 {
     const auto& output_shape = result.get_shape();
     const auto& b_shape      = arg3.get_shape();
@@ -351,11 +349,13 @@ inline auto nary(const argument& result, const argument& arg1, const argument& a
     };
 }
 
-inline auto nary(const argument& result, const argument& arg1, const argument& arg2, const argument& arg3)
+inline auto
+nary(const argument& result, const argument& arg1, const argument& arg2, const argument& arg3)
 {
     return [=](auto f) {
         // TODO: Check result and arg1 shape is the same
-        if(arg1.get_shape().standard() and arg2.get_shape().standard() and arg3.get_shape().broadcasted())
+        if(arg1.get_shape().standard() and arg2.get_shape().standard() and
+           arg3.get_shape().broadcasted())
         {
             auto not_zero       = [](auto x) { return x != 0; };
             const auto& strides = arg3.get_shape().strides();

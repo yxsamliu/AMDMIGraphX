@@ -57,26 +57,26 @@ void fuse_ops::apply(program& p) const
 {
     for(auto ins : iterator_for(p))
     {
-        if(ins->op.name() == "gpu::add") 
+        if(ins->op.name() == "gpu::add")
         {
             instruction_ref add_ins;
             instruction_ref input;
-            if(ins->arguments[0]->op.name() == "gpu::add") 
+            if(ins->arguments[0]->op.name() == "gpu::add")
             {
                 add_ins = ins->arguments[0];
-                input = ins->arguments[1];
+                input   = ins->arguments[1];
             }
-            else if(ins->arguments[1]->op.name() == "gpu::add") 
+            else if(ins->arguments[1]->op.name() == "gpu::add")
             {
                 add_ins = ins->arguments[1];
-                input = ins->arguments[0];
+                input   = ins->arguments[0];
             }
             else
             {
                 continue;
             }
             auto is_broadcasted = [](auto arg) { return arg->get_shape().broadcasted(); };
-            auto args = add_ins->arguments;
+            auto args           = add_ins->arguments;
             if(std::count_if(args.begin(), args.end(), is_broadcasted) > 1)
                 continue;
             args.insert(args.begin(), input);
@@ -86,12 +86,13 @@ void fuse_ops::apply(program& p) const
                 std::swap(*it, *std::prev(args.end(), 2));
             p.replace_instruction(ins, hip_triadd{}, args);
         }
-        if(ins->op.name() == "gpu::relu") 
+        if(ins->op.name() == "gpu::relu")
         {
             auto add_ins = ins->arguments.front();
             if(add_ins->op.name() == "gpu::add")
                 p.replace_instruction(ins, hip_add_relu{}, add_ins->arguments);
-            if(add_ins->op.name() == "hip::triadd") {
+            if(add_ins->op.name() == "hip::triadd")
+            {
                 p.replace_instruction(ins, hip_triadd_relu{}, add_ins->arguments);
             }
         }

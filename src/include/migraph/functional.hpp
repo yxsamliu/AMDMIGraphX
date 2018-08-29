@@ -88,12 +88,10 @@ auto pack(Ts... xs)
     return [=](auto f) { return f(xs...); };
 }
 
-template<class F>
+template <class F>
 auto not_fn(F f)
 {
-    return [=](auto&&... xs) {
-        return not f(std::forward<decltype(xs)>(xs)...);
-    };
+    return [=](auto&&... xs) { return not f(std::forward<decltype(xs)>(xs)...); };
 }
 
 } // namespace migraph
