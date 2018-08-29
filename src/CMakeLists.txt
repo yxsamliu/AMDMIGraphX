@@ -8,6 +8,7 @@ add_library(migraph
     generate.cpp
     program.cpp
     shape.cpp
+    simplify_add.cpp
     simplify_reshapes.cpp
 )
 rocm_clang_tidy_check(migraph)
