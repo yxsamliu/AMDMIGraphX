@@ -13,11 +13,14 @@ void simplify_add::apply(program& p) const
     {
         if(ins->op.name() != "add")
             continue;
-        auto is_cop = [](auto x) { return x->op.name() == "broadcast" or x->op.name() == "@literal"; };
+        auto is_cop = [](auto x) {
+            return x->op.name() == "broadcast" or x->op.name() == "@literal";
+        };
         auto is_not_cop = [&](auto x) { return not is_cop(x); };
-        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) { 
-            return x->op.name() == "add" and std::count_if(x->arguments.begin(), x->arguments.end(), is_cop) == 1; 
-        }))
+        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) {
+               return x->op.name() == "add" and
+                      std::count_if(x->arguments.begin(), x->arguments.end(), is_cop) == 1;
+           }))
             continue;
         auto add1 = ins->arguments.at(0);
         auto add2 = ins->arguments.at(1);
@@ -32,12 +35,13 @@ void simplify_add::apply(program& p) const
             continue;
         instruction_ref sumab;
         // TODO: Make broadcast unary
-        if(a->op.name() == "broadcast") {
+        if(a->op.name() == "broadcast")
+        {
             if(a->arguments.at(1)->get_shape() != b->arguments.at(1)->get_shape())
                 continue;
-            auto op = a->op;
+            auto op     = a->op;
             auto presum = p.insert_instruction(ins, add{}, a->arguments.at(1), b->arguments.at(1));
-            sumab = p.insert_instruction(ins, op, a->arguments.at(0), presum);
+            sumab       = p.insert_instruction(ins, op, a->arguments.at(0), presum);
         }
         else
         {
@@ -53,9 +57,9 @@ void simplify_add::apply(program& p) const
     {
         if(ins->op.name() != "add")
             continue;
-        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) { 
-            return x->op.name() == "@literal"; 
-        }))
+        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) {
+               return x->op.name() == "@literal";
+           }))
             continue;
         auto arg1 = ins->arguments.at(0)->lit;
         auto arg2 = ins->arguments.at(1)->lit;
