@@ -46,11 +46,11 @@ migraph::argument run_gpu(F f)
 }
 
 template <class F>
-void verify_program(const std::string& name, F f, double tolerance = 100)
+bool verify_program(const std::string& name, F f, double tolerance = 100)
 {
     auto x = run_cpu(f);
     auto y = run_gpu(f);
-    migraph::verify_args(name, x, y, tolerance);
+    return migraph::verify_args(name, x, y, tolerance);
 }
 
 void verify_instructions(const migraph::program& prog, double tolerance = 80)

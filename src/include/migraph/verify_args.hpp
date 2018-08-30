@@ -6,15 +6,17 @@
 
 namespace migraph {
 
-inline void verify_args(const std::string& name,
+inline bool verify_args(const std::string& name,
                         const argument& cpu_arg,
                         const argument& gpu_arg,
                         double tolerance = 80)
 {
+    bool result = true;
     visit_all(cpu_arg, gpu_arg)([&](auto cpu, auto gpu) {
         double error;
         if(not verify_range(cpu, gpu, tolerance, &error))
         {
+            result = false;
             // TODO: Check for nans
             std::cout << "FAILED: " << name << std::endl;
             std::cout << "error: " << error << std::endl;
@@ -46,6 +48,7 @@ inline void verify_args(const std::string& name,
             std::cout << std::endl;
         }
     });
+    return result;
 }
 
 } // namespace migraph
