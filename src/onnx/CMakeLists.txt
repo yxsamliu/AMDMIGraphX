@@ -12,13 +12,15 @@ rocm_clang_tidy_check(migraph_onnx)
 target_link_libraries(migraph_onnx PRIVATE onnx-proto)
 target_link_libraries(migraph_onnx PUBLIC migraph)
 
-
-
+if(MIGRAPH_ENABLE_GPU)
 add_executable(mnist mnist.cpp)
 rocm_clang_tidy_check(mnist)
-target_link_libraries(mnist migraph_cpu migraph_onnx)
+target_link_libraries(mnist migraph_cpu migraph_gpu migraph_onnx)
 
-if(MIGRAPH_ENABLE_GPU)
+add_executable(cifar10 cifar10.cpp)
+rocm_clang_tidy_check(cifar10)
+target_link_libraries(cifar10 migraph_cpu migraph_gpu migraph_onnx)
+
 add_executable(read_onnx read_onnx.cpp)
 rocm_clang_tidy_check(read_onnx)
 target_link_libraries(read_onnx migraph_onnx migraph_cpu migraph_gpu)
