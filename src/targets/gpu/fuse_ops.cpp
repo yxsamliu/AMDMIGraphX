@@ -90,7 +90,7 @@ void fuse_ops::apply(program& p) const
         if(ins->name() == "gpu::relu")
         {
             auto add_ins = ins->inputs().front();
-            if(add_ins->name() == "gpu::add") 
+            if(add_ins->name() == "gpu::add")
             {
                 auto args = add_ins->inputs();
                 // Use the allocation from the relu operator

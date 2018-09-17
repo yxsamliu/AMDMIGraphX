@@ -13,9 +13,7 @@ void simplify_add::apply(program& p) const
     {
         if(ins->name() != "add")
             continue;
-        auto is_cop = [](auto x) {
-            return x->name() == "broadcast" or x->name() == "@literal";
-        };
+        auto is_cop = [](auto x) { return x->name() == "broadcast" or x->name() == "@literal"; };
         auto is_not_cop = [&](auto x) { return not is_cop(x); };
         if(!std::all_of(ins->inputs().begin(), ins->inputs().end(), [&](auto x) {
                return x->name() == "add" and
