@@ -11,37 +11,37 @@ void simplify_add::apply(program& p) const
 {
     for(auto ins : iterator_for(p))
     {
-        if(ins->op.name() != "add")
+        if(ins->name() != "add")
             continue;
         auto is_cop = [](auto x) {
-            return x->op.name() == "broadcast" or x->op.name() == "@literal";
+            return x->name() == "broadcast" or x->name() == "@literal";
         };
         auto is_not_cop = [&](auto x) { return not is_cop(x); };
-        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) {
-               return x->op.name() == "add" and
-                      std::count_if(x->arguments.begin(), x->arguments.end(), is_cop) == 1;
+        if(!std::all_of(ins->inputs().begin(), ins->inputs().end(), [&](auto x) {
+               return x->name() == "add" and
+                      std::count_if(x->inputs().begin(), x->inputs().end(), is_cop) == 1;
            }))
             continue;
-        auto add1 = ins->arguments.at(0);
-        auto add2 = ins->arguments.at(1);
+        auto add1 = ins->inputs().at(0);
+        auto add2 = ins->inputs().at(1);
 
-        auto x = *std::find_if(add1->arguments.begin(), add1->arguments.end(), is_not_cop);
-        auto a = *std::find_if(add1->arguments.begin(), add1->arguments.end(), is_cop);
+        auto x = *std::find_if(add1->inputs().begin(), add1->inputs().end(), is_not_cop);
+        auto a = *std::find_if(add1->inputs().begin(), add1->inputs().end(), is_cop);
 
-        auto y = *std::find_if(add2->arguments.begin(), add2->arguments.end(), is_not_cop);
-        auto b = *std::find_if(add2->arguments.begin(), add2->arguments.end(), is_cop);
+        auto y = *std::find_if(add2->inputs().begin(), add2->inputs().end(), is_not_cop);
+        auto b = *std::find_if(add2->inputs().begin(), add2->inputs().end(), is_cop);
 
-        if(a->op.name() != b->op.name())
+        if(a->name() != b->name())
             continue;
         instruction_ref sumab;
         // TODO: Make broadcast unary
-        if(a->op.name() == "broadcast")
+        if(a->name() == "broadcast")
         {
-            if(a->arguments.at(1)->get_shape() != b->arguments.at(1)->get_shape())
+            if(a->inputs().at(1)->get_shape() != b->inputs().at(1)->get_shape())
                 continue;
-            auto op     = a->op;
-            auto presum = p.insert_instruction(ins, add{}, a->arguments.at(1), b->arguments.at(1));
-            sumab       = p.insert_instruction(ins, op, a->arguments.at(0), presum);
+            auto op     = a->get_operator();
+            auto presum = p.insert_instruction(ins, add{}, a->inputs().at(1), b->inputs().at(1));
+            sumab       = p.insert_instruction(ins, op, a->inputs().at(0), presum);
         }
         else
         {
@@ -55,14 +55,14 @@ void simplify_add::apply(program& p) const
     // Propogate constant adds
     for(auto ins : iterator_for(p))
     {
-        if(ins->op.name() != "add")
+        if(ins->name() != "add")
             continue;
-        if(!std::all_of(ins->arguments.begin(), ins->arguments.end(), [&](auto x) {
-               return x->op.name() == "@literal";
+        if(!std::all_of(ins->inputs().begin(), ins->inputs().end(), [&](auto x) {
+               return x->name() == "@literal";
            }))
             continue;
-        auto arg1 = ins->arguments.at(0)->lit;
-        auto arg2 = ins->arguments.at(1)->lit;
+        auto arg1 = ins->inputs().at(0)->get_literal();
+        auto arg2 = ins->inputs().at(1)->get_literal();
 
         auto sum = p.add_literal(transform(arg1, arg2, [](auto x, auto y) { return x + y; }));
         p.replace_instruction(ins, sum);

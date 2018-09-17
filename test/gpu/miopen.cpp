@@ -123,7 +123,7 @@ migraph::argument run_gpu()
     {
         m[x.first] = migraph::gpu::to_gpu(migraph::generate_argument(x.second, get_hash(x.first)));
     }
-
+    EXPECT(bool{m.find("output") != m.end()});
     return migraph::gpu::from_gpu(p.eval(m));
 }
 
@@ -231,6 +231,41 @@ struct test_add_broadcast5
         auto y  = p.add_parameter("y", {migraph::shape::float_type, {4}});
         auto by = p.add_instruction(migraph::broadcast{1}, x, y);
         p.add_instruction(migraph::add{}, x, by);
+        return p;
+    }
+};
+
+struct test_softmax
+{
+    migraph::program create_program() const
+    {
+        migraph::program p;
+        auto x = p.add_parameter("x", migraph::shape{migraph::shape::float_type, {5, 3, 4, 2}});
+        p.add_instruction(migraph::softmax{}, x);
+        return p;
+    }
+};
+
+struct test_softmax2
+{
+    migraph::program create_program() const
+    {
+        migraph::program p;
+        auto x = p.add_parameter("x", migraph::shape{migraph::shape::float_type, {1, 1000}});
+        p.add_instruction(migraph::softmax{}, x);
+        return p;
+    }
+};
+
+struct test_conv
+{
+    migraph::program create_program() const
+    {
+        migraph::program p;
+        auto input = p.add_parameter("x", migraph::shape{migraph::shape::float_type, {4, 3, 3, 3}});
+        auto weights =
+            p.add_parameter("w", migraph::shape{migraph::shape::float_type, {4, 3, 3, 3}});
+        p.add_instruction(migraph::convolution{}, input, weights);
         return p;
     }
 };
@@ -415,6 +450,27 @@ struct test_batchnorm_inference
     }
 };
 
+struct test_conv_bn
+{
+    migraph::program create_program() const
+    {
+        migraph::program p;
+
+        migraph::shape xs{migraph::shape::float_type, {1, 3, 224, 224}};
+        migraph::shape ws{migraph::shape::float_type, {64, 3, 7, 7}};
+        migraph::shape vars{migraph::shape::float_type, {64}};
+        auto x        = p.add_parameter("x", xs);
+        auto w        = p.add_parameter("w", ws);
+        auto conv     = p.add_instruction(migraph::convolution{{3, 3}, {2, 2}, {1, 1}}, x, w);
+        auto scale    = p.add_literal(migraph::abs(migraph::generate_literal(vars, 1)));
+        auto bias     = p.add_literal(migraph::abs(migraph::generate_literal(vars, 2)));
+        auto mean     = p.add_literal(migraph::abs(migraph::generate_literal(vars, 3)));
+        auto variance = p.add_literal(migraph::abs(migraph::generate_literal(vars, 4)));
+        p.add_instruction(migraph::batch_norm_inference{}, conv, scale, bias, mean, variance);
+        return p;
+    }
+};
+
 struct test_conv_bn_relu_pooling
 {
     migraph::program create_program() const
@@ -482,6 +538,10 @@ int main()
     verify_program<test_add_broadcast3>();
     verify_program<test_add_broadcast4>();
     verify_program<test_add_broadcast5>();
+    verify_program<test_softmax>();
+    // TODO: Add reshapes to make this a valid test case
+    // verify_program<test_softmax2>();
+    verify_program<test_conv>();
     verify_program<test_conv_relu>();
     verify_program<test_add_relu>();
     verify_program<test_conv_pooling>();
@@ -494,6 +554,7 @@ int main()
     verify_program<test_transpose>();
     verify_program<test_batchnorm_inference>();
     verify_program<test_batchnorm_inference_2>();
+    verify_program<test_conv_bn>();
     verify_program<test_conv_bn_relu_pooling>();
     verify_program<test_conv_bn_relu_pooling2>();
 }

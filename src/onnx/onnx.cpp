@@ -28,10 +28,6 @@ struct unknown
         else
             return input.front();
     }
-    argument compute(context&, const shape&, const std::vector<argument>&) const
-    {
-        MIGRAPH_THROW("not computable");
-    }
     friend std::ostream& operator<<(std::ostream& os, const unknown& x)
     {
         os << x.name();
@@ -58,6 +54,7 @@ struct onnx_parser
         add_generic_op("Mul", mul{});
         add_generic_op("Relu", activation{"relu"});
         add_generic_op("Sub", sub{});
+        add_generic_op("Sum", add{});
 
         add_mem_op("Constant", &onnx_parser::parse_constant);
         add_mem_op("Conv", &onnx_parser::parse_conv);
@@ -67,6 +64,7 @@ struct onnx_parser
         add_mem_op("Flatten", &onnx_parser::parse_flatten);
         add_mem_op("Gemm", &onnx_parser::parse_gemm);
         add_mem_op("BatchNormalization", &onnx_parser::parse_batchnorm);
+        add_mem_op("Softmax", &onnx_parser::parse_softmax);
     }
 
     template <class F>
@@ -101,6 +99,15 @@ struct onnx_parser
             }
             return prog.add_instruction(x, args);
         });
+    }
+
+    instruction_ref
+    parse_softmax(const std::string&, const attribute_map&, std::vector<instruction_ref> args)
+    {
+        auto dims = args.front()->get_shape().lens();
+        auto r = prog.add_instruction(reshape{{long(dims[0]), 1, 1, long(dims[1])}}, args.front());
+        auto s = prog.add_instruction(softmax{}, r);
+        return prog.add_instruction(reshape{{long(dims[0]), long(dims[1])}}, s);
     }
 
     instruction_ref
@@ -160,7 +167,7 @@ struct onnx_parser
         }
         if(args.size() == 2)
         {
-            literal s = args[1]->lit;
+            literal s = args[1]->get_literal();
             s.visit([&](auto v) { copy(v, std::back_inserter(op.dims)); });
         }
         return prog.add_instruction(op, args[0]);
