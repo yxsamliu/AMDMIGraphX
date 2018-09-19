@@ -496,6 +496,27 @@ struct test_conv_bn
     }
 };
 
+struct test_conv_bn2
+{
+    migraph::program create_program() const
+    {
+        migraph::program p;
+
+        migraph::shape xs{migraph::shape::float_type, {1, 2, 2, 2}};
+        migraph::shape ws{migraph::shape::float_type, {2, 2, 1, 1}};
+        migraph::shape vars{migraph::shape::float_type, {2}};
+        auto x        = p.add_parameter("x", xs);
+        auto w        = p.add_parameter("w", ws);
+        auto conv     = p.add_instruction(migraph::convolution{{0, 0}, {1, 1}, {1, 1}}, x, w);
+        auto scale    = p.add_literal(migraph::literal{vars, {3, 4}});
+        auto bias     = p.add_literal(migraph::literal{vars, {8.1, 9.1}});
+        auto mean     = p.add_literal(migraph::literal{vars, {4, 5}});
+        auto variance = p.add_literal(migraph::literal{vars, {30.01, 31.01}});
+        p.add_instruction(migraph::batch_norm_inference{}, conv, scale, bias, mean, variance);
+        return p;
+    }
+};
+
 struct test_conv_bn_relu_pooling
 {
     migraph::program create_program() const
@@ -580,6 +601,7 @@ int main()
     verify_program<test_batchnorm_inference>();
     verify_program<test_batchnorm_inference_2>();
     verify_program<test_conv_bn>();
+    verify_program<test_conv_bn2>();
     verify_program<test_conv_bn_relu_pooling>();
     verify_program<test_conv_bn_relu_pooling2>();
 }
