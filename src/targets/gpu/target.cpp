@@ -12,13 +12,16 @@
 #include <migraph/simplify_reshapes.hpp>
 #include <migraph/eliminate_contiguous.hpp>
 #include <migraph/fwd_conv_batchnorm_rewrite.hpp>
+#include <migraph/pre_scheduling.hpp>
+#include <migraph/gpu/machine_model.hpp>
 
 namespace migraph {
 namespace gpu {
 
 std::vector<pass> target::get_passes(migraph::context& gctx) const
 {
-    auto& ctx = any_cast<context>(gctx);
+    auto& ctx                                      = any_cast<context>(gctx);
+    std::function<float(std::string&)> weight_func = op_weight();
     // clang-format off
     return
     {
@@ -27,14 +30,15 @@ std::vector<pass> target::get_passes(migraph::context& gctx) const
         dead_code_elimination{},
         auto_contiguous{},
         simplify_reshapes{},
+        pre_scheduling{weight_func},            
         dead_code_elimination{},
         lowering{ctx},
         fuse_ops{&ctx},
         dead_code_elimination{},
         eliminate_contiguous{},
         dead_code_elimination{},
+        memory_coloring{"hip::allocate"},            
         write_literals{&ctx},
-        memory_coloring{"hip::allocate"},
         eliminate_workspace{},
         eliminate_allocation{"hip::allocate"},
         check_context<context>{},

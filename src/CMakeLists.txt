@@ -14,6 +14,8 @@ add_library(migraph
     simplify_reshapes.cpp
     opt/memory_coloring.cpp
     opt/memory_coloring_impl.cpp
+    opt/pre_scheduling.cpp
+    opt/pre_scheduling_impl.cpp
 )
 rocm_clang_tidy_check(migraph)
 target_include_directories(migraph PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
@@ -24,9 +26,9 @@ if(MIGRAPH_ENABLE_GPU)
 add_subdirectory(targets/gpu)
 endif()
 
-#install (TARGETS migraph
-#   LIBRARY DESTINATION /opt/rocm/lib)
+install (TARGETS migraph
+   LIBRARY DESTINATION /opt/rocm/lib)
 
-#install (DIRECTORY include/migraph DESTINATION /opt/rocm/include)
+install (DIRECTORY include/migraph DESTINATION /opt/rocm/include)
  
 
