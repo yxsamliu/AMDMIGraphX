@@ -79,7 +79,7 @@ void test3()
     auto p3 = add_alloc(p, {migraph::shape::float_type, {40}});
     p.add_instruction(pass_op{}, p3, p1);
     p.compile(memory_coloring_target{});
-    EXPECT(p.get_parameter_shape("scratch").bytes() == 704);
+    EXPECT(p.get_parameter_shape("scratch").bytes() == 672);
     EXPECT(no_allocate(p));
 }
 
@@ -341,7 +341,7 @@ int main()
     test17();
     test18();
     test19();
-    // test20();
+    test20();
 
     literal_test();
 }
