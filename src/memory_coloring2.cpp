@@ -49,6 +49,7 @@ instruction_set_map build_conflict_table(const program& p, std::string allocatio
     liveness(p, [&](auto, auto live_set) {
         for(auto i : live_set)
         {
+            conflict_table[i];
             if(i->name() != allocation_op)
                 continue;
             for(auto j : live_set)
@@ -130,11 +131,19 @@ void memory_coloring2::apply(program& p) const
         auto&& parent   = pp.first;
         auto&& children = pp.second;
         std::set<int> colors;
-        colors.insert(ac.get_color(parent));
+        auto parent_color = ac.get_color(parent);
+        colors.insert(parent_color);
         std::transform(children.begin(),
                        children.end(),
                        std::inserter(colors, colors.end()),
                        [&](auto child) { return ac.get_color(child); });
+        // Color parent if needed
+        if(parent_color < 0)
+        {
+            parent_color = next_color(colors);
+            ac.add_color(parent, parent_color);
+            colors.insert(parent_color);
+        }
         for(auto child : children)
         {
             auto color = ac.get_color(child);
