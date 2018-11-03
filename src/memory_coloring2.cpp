@@ -49,9 +49,9 @@ instruction_set_map build_conflict_table(const program& p, std::string allocatio
     liveness(p, [&](auto, auto live_set) {
         for(auto i : live_set)
         {
-            conflict_table[i];
             if(i->name() != allocation_op)
                 continue;
+            conflict_table[i];
             for(auto j : live_set)
             {
                 if(j->name() != allocation_op)
@@ -187,6 +187,7 @@ void memory_coloring2::apply(program& p) const
         auto offset        = color2offset.at(color);
         for(auto ins : allocations)
         {
+            assert(ins->name() == allocation_op);
             auto s = ins->get_shape();
             p.replace_instruction(ins, op::load{s, std::size_t(offset)}, mem);
         }

@@ -1,6 +1,6 @@
 #include <migraph/gpu/target.hpp>
 #include <migraph/gpu/lowering.hpp>
-#include <migraph/memory_coloring.hpp>
+#include <migraph/memory_coloring2.hpp>
 #include <migraph/gpu/write_literals.hpp>
 #include <migraph/gpu/context.hpp>
 #include <migraph/gpu/eliminate_workspace.hpp>
@@ -43,9 +43,8 @@ std::vector<pass> target::get_passes(migraph::context& gctx) const
         fuse_ops{&ctx},
         dead_code_elimination{},
         write_literals{&ctx},
-        memory_coloring{"hip::allocate"},
-        eliminate_workspace{},
-        eliminate_allocation{"hip::allocate"},
+        memory_coloring2{"hip::allocate"},
+        dead_code_elimination{},
         check_context<context>{},
         dead_code_elimination{}
     };

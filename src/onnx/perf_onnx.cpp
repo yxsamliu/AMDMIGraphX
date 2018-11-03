@@ -32,5 +32,6 @@ int main(int argc, char const* argv[])
         auto m = create_param_map(p);
         std::cout << "Running performance report ... " << std::endl;
         p.perf_report(std::cout, n, m);
+        std::cout << "Scratch: " << m["scratch"].bytes() << std::endl;
     }
 }
