@@ -127,7 +127,10 @@ void memory_coloring2::apply(program& p) const
     auto conflict_table = build_conflict_table(p, allocation_op);
     allocation_color ac{};
     std::vector<instruction_ref> conflict_queue;
-    std::transform(conflict_table.begin(), conflict_table.end(), std::back_inserter(conflict_queue), [](auto&& pp) {return pp.first; });
+    std::transform(conflict_table.begin(),
+                   conflict_table.end(),
+                   std::back_inserter(conflict_queue),
+                   [](auto&& pp) { return pp.first; });
     std::sort(conflict_queue.begin(), conflict_queue.end(), [&](auto x, auto y) {
         return conflict_table.at(x).size() < conflict_table.at(y).size();
     });
