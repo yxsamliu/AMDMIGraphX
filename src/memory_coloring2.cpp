@@ -132,7 +132,8 @@ void memory_coloring2::apply(program& p) const
                    std::back_inserter(conflict_queue),
                    [](auto&& pp) { return pp.first; });
     std::sort(conflict_queue.begin(), conflict_queue.end(), [&](auto x, auto y) {
-        return std::make_tuple(conflict_table.at(x).size(), x->get_shape().bytes()) < std::make_tuple(conflict_table.at(y).size(), y->get_shape().bytes());
+        return std::make_tuple(conflict_table.at(x).size(), x->get_shape().bytes()) <
+               std::make_tuple(conflict_table.at(y).size(), y->get_shape().bytes());
     });
     for(auto parent : conflict_queue)
     {
