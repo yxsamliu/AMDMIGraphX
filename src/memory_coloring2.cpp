@@ -13,19 +13,19 @@
 
 namespace migraph {
 
-using instruction_set = std::unordered_set<instruction_ref>;
+using instruction_set     = std::unordered_set<instruction_ref>;
 using instruction_set_map = std::unordered_map<instruction_ref, instruction_set>;
 
-template<class F>
+template <class F>
 void liveness(const program& p, F f)
 {
     instruction_set live_set;
     auto rp = reverse(p);
-    for(auto rins:iterator_for(rp))
+    for(auto rins : iterator_for(rp))
     {
         auto ins = std::prev(rins.base());
         // Add live variables
-        for(auto input:ins->inputs())
+        for(auto input : ins->inputs())
         {
             auto i = instruction::get_output_alias(input);
             // Skip builtins
@@ -35,7 +35,7 @@ void liveness(const program& p, F f)
         }
         // Remove last usage
         auto it = live_set.find(ins);
-        if(it != live_set.end()) 
+        if(it != live_set.end())
         {
             f(ins, live_set);
             live_set.erase(it);
@@ -46,13 +46,12 @@ void liveness(const program& p, F f)
 instruction_set_map build_conflict_table(const program& p, std::string allocation_op)
 {
     instruction_set_map conflict_table;
-    liveness(p, [&](auto, auto live_set)
-    {
-        for(auto i:live_set)
+    liveness(p, [&](auto, auto live_set) {
+        for(auto i : live_set)
         {
             if(i->name() != allocation_op)
                 continue;
-            for(auto j:live_set)
+            for(auto j : live_set)
             {
                 if(j->name() != allocation_op)
                     continue;
@@ -100,7 +99,7 @@ struct allocation_color
     std::size_t max_bytes(int color) const
     {
         auto&& is = color2ins.at(color);
-        auto it =  std::max_element(is.begin(), is.end(), [](auto x, auto y) {
+        auto it   = std::max_element(is.begin(), is.end(), [](auto x, auto y) {
             return x->get_shape().bytes() < y->get_shape().bytes();
         });
         return (*it)->get_shape().bytes();
@@ -111,9 +110,9 @@ int next_color(const std::set<int>& colors)
 {
     int i = 0;
     // TODO: Use adjacent_find
-    for(auto color:colors)
+    for(auto color : colors)
     {
-        if (color < 0)
+        if(color < 0)
             continue;
         if(color != i)
             return i;
@@ -126,19 +125,20 @@ void memory_coloring2::apply(program& p) const
 {
     auto conflict_table = build_conflict_table(p, allocation_op);
     allocation_color ac{};
-    for(auto&& pp:conflict_table)
+    for(auto&& pp : conflict_table)
     {
-        auto&& parent = pp.first;
+        auto&& parent   = pp.first;
         auto&& children = pp.second;
         std::set<int> colors;
         colors.insert(ac.get_color(parent));
-        std::transform(children.begin(), children.end(), std::inserter(colors, colors.end()), [&](auto child) {
-            return ac.get_color(child);
-        });
-        for(auto child:children)
+        std::transform(children.begin(),
+                       children.end(),
+                       std::inserter(colors, colors.end()),
+                       [&](auto child) { return ac.get_color(child); });
+        for(auto child : children)
         {
             auto color = ac.get_color(child);
-            if(color < 0) 
+            if(color < 0)
             {
                 color = next_color(colors);
                 ac.add_color(child, color);
@@ -151,7 +151,7 @@ void memory_coloring2::apply(program& p) const
     // Compute offsets
     std::size_t n = 0;
     std::map<int, int> color2offset;
-    for(auto&& pp:ac.color2ins)
+    for(auto&& pp : ac.color2ins)
     {
         auto color = pp.first;
         // auto&& allocations = pp.second;
@@ -165,12 +165,12 @@ void memory_coloring2::apply(program& p) const
     auto mem = p.add_parameter("scratch", shape{shape::int8_type, {n}});
     for(auto&& pp : ac.color2ins)
     {
-        auto color = pp.first;
+        auto color         = pp.first;
         auto&& allocations = pp.second;
-        auto offset = color2offset.at(color);
-        for(auto ins:allocations)
+        auto offset        = color2offset.at(color);
+        for(auto ins : allocations)
         {
-            auto s      = ins->get_shape();
+            auto s = ins->get_shape();
             p.replace_instruction(ins, op::load{s, std::size_t(offset)}, mem);
         }
     }

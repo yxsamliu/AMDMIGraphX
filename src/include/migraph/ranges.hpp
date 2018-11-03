@@ -104,7 +104,7 @@ iterator_range<Iterator> range(std::pair<Iterator, Iterator> p)
     return {p.first, p.second};
 }
 
-template<class Range>
+template <class Range>
 auto reverse(Range& r)
 {
     return range(std::make_reverse_iterator(r.end()), std::make_reverse_iterator(r.begin()));

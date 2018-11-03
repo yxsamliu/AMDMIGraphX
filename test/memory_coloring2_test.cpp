@@ -32,7 +32,6 @@ struct allocate
     }
 };
 
-
 void test1()
 {
     migraph::program p;
@@ -46,6 +45,4 @@ void test1()
     EXPECT(p.get_parameter_shape("scratch").bytes() == 192);
 }
 
-int main() {
-    test1();
-}
+int main() { test1(); }
