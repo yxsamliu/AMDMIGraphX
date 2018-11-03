@@ -280,7 +280,7 @@ void program::compile(const target& t, tracer trace)
 {
     assert(this->validate() == impl->instructions.end());
     this->impl->ctx = t.get_context();
-    if(not trace.enabled() or enabled(MIGRAPH_TRACE_COMPILE{}))
+    if(not trace.enabled() and enabled(MIGRAPH_TRACE_COMPILE{}))
         trace = tracer{std::cout};
     trace(*this);
     trace();
@@ -468,8 +468,8 @@ void program::perf_report(std::ostream& os, std::size_t n, parameter_map params)
        << ", " << std::round(calculate_overhead_percent) << "%" << std::endl;
 }
 
-void program::debug_print() { std::cout << *this << std::endl; }
-void program::debug_print(instruction_ref ins)
+void program::debug_print() const { std::cout << *this << std::endl; }
+void program::debug_print(instruction_ref ins) const
 {
     std::stringstream ss;
     print_program(ss, *this, [&](auto x, auto&& names) {
@@ -480,7 +480,7 @@ void program::debug_print(instruction_ref ins)
         }
     });
 }
-void program::debug_print(const std::vector<instruction_ref>& inss)
+void program::debug_print(const std::vector<instruction_ref>& inss) const
 {
     for(auto ins : inss)
         debug_print(ins);

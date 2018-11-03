@@ -10,6 +10,7 @@ add_library(migraph
     env.cpp
     generate.cpp
     instruction.cpp
+    memory_coloring2.cpp
     program.cpp
     shape.cpp
     simplify_algebra.cpp
