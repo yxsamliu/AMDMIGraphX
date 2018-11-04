@@ -162,13 +162,13 @@ void memory_coloring2::apply(program& p) const
     }
 
     const std::size_t alignment = 32;
-    // Compute offsets
+    // Total memory
     std::size_t n = 0;
+    // Compute offsets
     std::map<int, int> color2offset;
     for(auto&& pp : ac.color2ins)
     {
         auto color = pp.first;
-        // auto&& allocations = pp.second;
         color2offset.emplace(color, n);
         std::size_t size    = ac.max_bytes(color);
         std::size_t padding = (alignment - (size % alignment)) % alignment;
