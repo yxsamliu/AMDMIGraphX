@@ -28,9 +28,6 @@ void liveness(const program& p, F f)
         for(auto input : ins->inputs())
         {
             auto i = instruction::get_output_alias(input);
-            // Skip builtins
-            if(starts_with(i->name(), "@"))
-                continue;
             live_set.insert(i);
         }
         // Remove last usage
