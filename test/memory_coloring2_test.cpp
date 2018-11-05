@@ -369,11 +369,11 @@ void test24()
 void test25()
 {
     migraph::program p;
-    auto a1 = add_alloc(p, {migraph::shape::float_type, {8}});
+    auto a1   = add_alloc(p, {migraph::shape::float_type, {8}});
     auto nop1 = p.add_instruction(nop{});
-    auto p1 = p.add_instruction(pass_op{}, a1);
+    auto p1   = p.add_instruction(pass_op{}, a1);
     auto nop2 = p.add_instruction(nop{});
-    auto a2 = add_alloc(p, {migraph::shape::float_type, {40}});
+    auto a2   = add_alloc(p, {migraph::shape::float_type, {40}});
     p.add_instruction(pass_op{}, a2, p1);
     p.compile(memory_coloring_target{});
     EXPECT(p.get_parameter_shape("scratch").bytes() == 192);
