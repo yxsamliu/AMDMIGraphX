@@ -366,6 +366,20 @@ void test24()
     EXPECT(no_allocate(p));
 }
 
+void test25()
+{
+    migraph::program p;
+    auto a1 = add_alloc(p, {migraph::shape::float_type, {8}});
+    auto nop1 = p.add_instruction(nop{});
+    auto p1 = p.add_instruction(pass_op{}, a1);
+    auto nop2 = p.add_instruction(nop{});
+    auto a2 = add_alloc(p, {migraph::shape::float_type, {40}});
+    p.add_instruction(pass_op{}, a2, p1);
+    p.compile(memory_coloring_target{});
+    EXPECT(p.get_parameter_shape("scratch").bytes() == 192);
+    EXPECT(no_allocate(p));
+}
+
 void literal_test()
 {
     migraph::program p;
@@ -402,6 +416,7 @@ int main()
     test22();
     test23();
     test24();
+    test25();
 
     literal_test();
 }
