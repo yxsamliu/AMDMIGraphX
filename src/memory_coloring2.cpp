@@ -71,6 +71,9 @@ instruction_set_map build_conflict_table(const program& p, std::string allocatio
             }
         }
     });
+    assert(std::all_of(conflict_table.begin(), conflict_table.end(), [](auto&& pp) {
+        return pp.second.count(pp.first) == 0;
+    }));
     return conflict_table;
 }
 
@@ -120,16 +123,23 @@ struct allocation_color
         return (*it)->get_shape().bytes();
     }
 
-    // Find next available color in the set
-    static int next_color(const std::set<int>& colors)
+    // Insert next available color in the set
+    static int next_color(std::set<int>& colors)
     {
         auto start = colors.find(0);
-        if(start == colors.end())
+        if(start == colors.end()) 
+        {
+            colors.insert(0);
             return 0;
+        }
         auto it =
-            std::adjacent_find(start, colors.end(), [](int x, int y) { return (x + 1) == y; });
-        auto last = (it == colors.end()) ? std::prev(it) : std::next(it);
-        return *last + 1;
+            std::adjacent_find(start, colors.end(), [](int x, int y) { return (x + 1) != y; });
+        auto last = (it == colors.end()) ? std::prev(it) : it;
+        // Compute the next color available
+        auto n = *last + 1;
+        assert(colors.count(n) == 0);
+        colors.insert(n);
+        return n;
     }
 
     // Build the allocation_color class from the conflict_table
@@ -153,35 +163,40 @@ struct allocation_color
         // the parent and the adjacent allocations as children
         for(auto parent : conflict_queue)
         {
-            auto&& children = conflict_table.at(parent);
+            // Sort children by size
+            std::vector<instruction_ref> children(conflict_table.at(parent).begin(), conflict_table.at(parent).end());
+            std::sort(children.begin(), children.end(), [](auto x, auto y) {
+                return x->get_shape().bytes() < y->get_shape().bytes();
+            });
             // This set is to track the colors already processed
             std::set<int> colors;
-            // Get the color for the parent and added it to the colors already
-            // processed
-            auto parent_color = ac.get_color(parent);
-            colors.insert(parent_color);
             // Add all colors for the children to the colors already processed
             std::transform(children.begin(),
                            children.end(),
-                           std::inserter(colors, colors.end()),
+                           std::inserter(colors, colors.begin()),
                            [&](auto child) { return ac.get_color(child); });
-            // Color the parent if hasn't been colored
-            if(parent_color < 0)
+            // Get the color for the parent
+            auto parent_color = ac.get_color(parent);
+            // Color the parent if hasn't been colored or the color is already used by the children
+            if(parent_color < 0 or colors.count(parent_color) > 0)
             {
                 // Get next available color
                 parent_color = next_color(colors);
                 ac.add_color(parent, parent_color);
+            }
+            else
+            {
                 colors.insert(parent_color);
             }
             for(auto child : children)
             {
+                assert(child != parent);
                 auto color = ac.get_color(child);
                 if(color < 0)
                 {
                     // Get next available color
                     color = next_color(colors);
                     ac.add_color(child, color);
-                    colors.insert(color);
                 }
             }
         }
@@ -203,7 +218,9 @@ void memory_coloring2::apply(program& p) const
     assert(std::none_of(conflict_table.begin(), conflict_table.end(), [&](auto&& pp) {
         auto c = ac.get_color(pp.first);
         return std::any_of(
-            pp.second.begin(), pp.second.end(), [&](auto ins) { return ac.get_color(ins) == c; });
+            pp.second.begin(), pp.second.end(), [&](auto ins) { 
+                return ac.get_color(ins) == c;
+            });
     }));
 
     const std::size_t alignment = 32;
