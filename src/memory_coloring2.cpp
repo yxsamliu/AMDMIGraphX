@@ -194,6 +194,19 @@ void memory_coloring2::apply(program& p) const
     auto conflict_table = build_conflict_table(p, allocation_op);
     auto ac             = allocation_color::build(conflict_table);
 
+    // All allocations should have a color
+    assert(std::all_of(conflict_table.begin(), conflict_table.end(), [&](auto&& pp) {
+        return ac.get_color(pp.first) >= 0;
+    }));
+
+    // Adjacent allocations should not share the same color
+    assert(std::none_of(conflict_table.begin(), conflict_table.end(), [&](auto&& pp) {
+        auto c = ac.get_color(pp.first);
+        return std::any_of(pp.second.begin(), pp.second.end(), [&](auto ins) {
+            return ac.get_color(ins) == c;
+        });
+    }));
+
     const std::size_t alignment = 32;
     // Total memory
     std::size_t n = 0;
