@@ -202,9 +202,8 @@ void memory_coloring2::apply(program& p) const
     // Adjacent allocations should not share the same color
     assert(std::none_of(conflict_table.begin(), conflict_table.end(), [&](auto&& pp) {
         auto c = ac.get_color(pp.first);
-        return std::any_of(pp.second.begin(), pp.second.end(), [&](auto ins) {
-            return ac.get_color(ins) == c;
-        });
+        return std::any_of(
+            pp.second.begin(), pp.second.end(), [&](auto ins) { return ac.get_color(ins) == c; });
     }));
 
     const std::size_t alignment = 32;
