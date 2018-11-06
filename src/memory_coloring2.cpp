@@ -127,7 +127,7 @@ struct allocation_color
     static int next_color(std::set<int>& colors)
     {
         auto start = colors.find(0);
-        if(start == colors.end()) 
+        if(start == colors.end())
         {
             colors.insert(0);
             return 0;
@@ -164,7 +164,8 @@ struct allocation_color
         for(auto parent : conflict_queue)
         {
             // Sort children by size
-            std::vector<instruction_ref> children(conflict_table.at(parent).begin(), conflict_table.at(parent).end());
+            std::vector<instruction_ref> children(conflict_table.at(parent).begin(),
+                                                  conflict_table.at(parent).end());
             std::sort(children.begin(), children.end(), [](auto x, auto y) {
                 return x->get_shape().bytes() < y->get_shape().bytes();
             });
@@ -218,9 +219,7 @@ void memory_coloring2::apply(program& p) const
     assert(std::none_of(conflict_table.begin(), conflict_table.end(), [&](auto&& pp) {
         auto c = ac.get_color(pp.first);
         return std::any_of(
-            pp.second.begin(), pp.second.end(), [&](auto ins) { 
-                return ac.get_color(ins) == c;
-            });
+            pp.second.begin(), pp.second.end(), [&](auto ins) { return ac.get_color(ins) == c; });
     }));
 
     const std::size_t alignment = 32;
