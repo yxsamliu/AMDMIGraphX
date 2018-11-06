@@ -16,6 +16,9 @@ namespace migraph {
 using instruction_set     = std::unordered_set<instruction_ref>;
 using instruction_set_map = std::unordered_map<instruction_ref, instruction_set>;
 
+// This will do liveness analysis on the program, and it will call the
+// function `f` with the instruction and the set of the other instructions
+// that are live
 template <class F>
 void liveness(const program& p, F f)
 {
@@ -23,6 +26,7 @@ void liveness(const program& p, F f)
     auto rp = reverse(p);
     for(auto rins : iterator_for(rp))
     {
+        // The base iterator is one ahead, so we need to use the previous iterator
         auto ins = std::prev(rins.base());
         // Add live variables
         for(auto input : ins->inputs())
@@ -40,21 +44,28 @@ void liveness(const program& p, F f)
     }
 }
 
+// This will build the conflict table or interference graph. This is
+// essentially a map from one instruction to a set of instruction that are
+// used together. Each instruction will be the allocation instruction.
 instruction_set_map build_conflict_table(const program& p, std::string allocation_op)
 {
     instruction_set_map conflict_table;
     liveness(p, [&](auto, auto live_set) {
         for(auto i : live_set)
         {
+            // Skip variables that aren't allocations
             if(i->name() != allocation_op)
                 continue;
             conflict_table[i];
             for(auto j : live_set)
             {
+                // Skip variables that aren't allocations
                 if(j->name() != allocation_op)
                     continue;
                 if(i == j)
                     continue;
+                // Add all variables that are used together to the
+                // conflict_table
                 conflict_table[i].insert(j);
                 conflict_table[j].insert(i);
             }
@@ -63,11 +74,13 @@ instruction_set_map build_conflict_table(const program& p, std::string allocatio
     return conflict_table;
 }
 
+// A class to manage allocation colors
 struct allocation_color
 {
     std::unordered_map<instruction_ref, int> ins2color;
     std::map<int, instruction_set> color2ins;
-
+    
+    // Add a color for an instruction. Each color must be a positive integer.
     void add_color(instruction_ref ins, int color)
     {
         assert(color >= 0);
@@ -76,6 +89,8 @@ struct allocation_color
         color2ins[color].insert(ins);
     }
 
+    // Get the color for an instruction, if the instruction doesn't have a
+    // color it will return a negative number.
     int get_color(instruction_ref ins) const
     {
         auto it = ins2color.find(ins);
@@ -84,6 +99,7 @@ struct allocation_color
         return it->second;
     }
 
+    // Remove color for an instruction
     void remove(instruction_ref ins)
     {
         auto it = ins2color.find(ins);
@@ -94,6 +110,7 @@ struct allocation_color
         }
     }
 
+    // Get the max amount of memory for a color
     std::size_t max_bytes(int color) const
     {
         auto&& is = color2ins.at(color);
@@ -102,64 +119,81 @@ struct allocation_color
         });
         return (*it)->get_shape().bytes();
     }
-};
 
-int next_color(const std::set<int>& colors)
-{
-    int i = 0;
-    // TODO: Use adjacent_find
-    for(auto color : colors)
+    // Find next available color in the set
+    static int next_color(const std::set<int>& colors)
     {
-        if(color < 0)
-            continue;
-        if(color != i)
-            return i;
-        i++;
+        auto start = colors.find(0);
+        if(start == colors.end())
+            return 0;
+        auto it = std::adjacent_find(start, colors.end(), [](int x, int y) {
+            return (x + 1) == y;
+        });
+        auto last = (it == colors.end()) ? std::prev(it) : std::next(it);
+        return *last + 1;
     }
-    return i;
-}
+
+    // Build the allocation_color class from the conflict_table
+    static allocation_color build(const instruction_set_map& conflict_table)
+    {
+        allocation_color ac{};
+        std::vector<instruction_ref> conflict_queue;
+        // Add all allocations to the conflict_queue
+        std::transform(conflict_table.begin(),
+                       conflict_table.end(),
+                       std::back_inserter(conflict_queue),
+                       [](auto&& pp) { return pp.first; });
+        
+        // Sort the conflict queue so we process the allocation with the least
+        // number of adjacent allocations first
+        std::sort(conflict_queue.begin(), conflict_queue.end(), [&](auto x, auto y) {
+            return std::make_tuple(conflict_table.at(x).size(), x->get_shape().bytes()) <
+                   std::make_tuple(conflict_table.at(y).size(), y->get_shape().bytes());
+        });
+        // Process the conflict_queue, we refer to the current allocation as
+        // the parent and the adjacent allocations as children
+        for(auto parent : conflict_queue)
+        {
+            auto&& children = conflict_table.at(parent);
+            // This set is to track the colors already processed
+            std::set<int> colors;
+            // Get the color for the parent and added it to the colors already
+            // processed
+            auto parent_color = ac.get_color(parent);
+            colors.insert(parent_color);
+            // Add all colors for the children to the colors already processed
+            std::transform(children.begin(),
+                           children.end(),
+                           std::inserter(colors, colors.end()),
+                           [&](auto child) { return ac.get_color(child); });
+            // Color the parent if hasn't been colored
+            if(parent_color < 0)
+            {
+                // Get next available color
+                parent_color = next_color(colors);
+                ac.add_color(parent, parent_color);
+                colors.insert(parent_color);
+            }
+            for(auto child : children)
+            {
+                auto color = ac.get_color(child);
+                if(color < 0)
+                {
+                    // Get next available color
+                    color = next_color(colors);
+                    ac.add_color(child, color);
+                    colors.insert(color);
+                }
+            }
+        }
+        return ac;
+    }
+};
 
 void memory_coloring2::apply(program& p) const
 {
     auto conflict_table = build_conflict_table(p, allocation_op);
-    allocation_color ac{};
-    std::vector<instruction_ref> conflict_queue;
-    std::transform(conflict_table.begin(),
-                   conflict_table.end(),
-                   std::back_inserter(conflict_queue),
-                   [](auto&& pp) { return pp.first; });
-    std::sort(conflict_queue.begin(), conflict_queue.end(), [&](auto x, auto y) {
-        return std::make_tuple(conflict_table.at(x).size(), x->get_shape().bytes()) <
-               std::make_tuple(conflict_table.at(y).size(), y->get_shape().bytes());
-    });
-    for(auto parent : conflict_queue)
-    {
-        auto&& children = conflict_table[parent];
-        std::set<int> colors;
-        auto parent_color = ac.get_color(parent);
-        colors.insert(parent_color);
-        std::transform(children.begin(),
-                       children.end(),
-                       std::inserter(colors, colors.end()),
-                       [&](auto child) { return ac.get_color(child); });
-        // Color parent if needed
-        if(parent_color < 0)
-        {
-            parent_color = next_color(colors);
-            ac.add_color(parent, parent_color);
-            colors.insert(parent_color);
-        }
-        for(auto child : children)
-        {
-            auto color = ac.get_color(child);
-            if(color < 0)
-            {
-                color = next_color(colors);
-                ac.add_color(child, color);
-                colors.insert(color);
-            }
-        }
-    }
+    auto ac = allocation_color::build(conflict_table);
 
     const std::size_t alignment = 32;
     // Total memory
