@@ -21,7 +21,7 @@ argument miopen_convolution::compute(context& ctx,
     auto y_desc = make_tensor(output_shape);
 
     float alpha = 1, beta = 0;
-    miopenConvolutionForward(ctx.handle.get(),
+    miopenConvolutionForward(ctx.handle[ctx.handle_ndx].get(),
                              &alpha,
                              x_desc.get(),
                              args[0].implicit(),
@@ -48,7 +48,7 @@ shape miopen_convolution::compile(context& ctx,
 
     std::size_t workspace_size = 0;
     miopenConvolutionForwardGetWorkSpaceSize(
-        ctx.handle.get(), w_desc.get(), x_desc.get(), cd.get(), y_desc.get(), &workspace_size);
+        ctx.handle[ctx.handle_ndx].get(), w_desc.get(), x_desc.get(), cd.get(), y_desc.get(), &workspace_size);
     workspace_shape = shape{shape::int8_type, {workspace_size}};
 
     auto x         = to_gpu(generate_argument(inputs[0]->get_shape()));
@@ -58,7 +58,7 @@ shape miopen_convolution::compile(context& ctx,
 
     int algo_count = 1;
     miopenConvAlgoPerf_t perf;
-    miopenFindConvolutionForwardAlgorithm(ctx.handle.get(),
+    miopenFindConvolutionForwardAlgorithm(ctx.handle[ctx.handle_ndx].get(),
                                           x_desc.get(),
                                           x.implicit(),
                                           w_desc.get(),
@@ -72,7 +72,11 @@ shape miopen_convolution::compile(context& ctx,
                                           workspace.implicit(),
                                           workspace_size,
                                           false);
+#if 1
     algo = perf.fwd_algo;
+#else
+    algo = miopenConvolutionFwdAlgoGEMM;
+#endif    
     return shape{shape::int8_type, {perf.memory}};
 }
 

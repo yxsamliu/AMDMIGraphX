@@ -60,7 +60,8 @@ static void print_program(std::ostream& os, const program& p, F annonate)
             }
             os << ")";
         }
-
+        if (ins->get_stream() > 0)
+            os << "(stream=" <<  ins->get_stream() << ")";
         os << " -> " << ins->get_shape();
 
         annonate(ins, names);
@@ -303,6 +304,7 @@ argument generic_eval(const program& p,
     values.reserve(16);
     for(auto ins : iterator_for(p))
     {
+        ctx.set_handle_ndx(ins->get_stream());
         if(ins->name() == "@literal")
         {
             results.emplace(ins, trace(ins, [&] { return ins->get_literal().get_argument(); }));
@@ -326,8 +328,9 @@ argument generic_eval(const program& p,
                     assert(results.find(i) != results.end());
                     return results[i];
                 });
+            
             results.emplace(ins, trace(ins, [&] {
-                                return ins->get_operator().compute(ctx, ins->get_shape(), values);
+                        return ins->get_operator().compute(ctx, ins->get_shape(), values);
                             }));
         }
         assert(results.find(ins) != results.end());
@@ -384,6 +387,7 @@ void program::perf_report(std::ostream& os, std::size_t n, parameter_map params)
         ins_vec[ins].reserve(n);
         return argument{};
     });
+
     // Run and time each instruction
     for(std::size_t i = 0; i < n; i++)
     {

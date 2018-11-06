@@ -19,6 +19,7 @@ struct context
 {
     /// Wait for any tasks in the context to complete
     void finish() const;
+    void set_handle_ndx(int);
 };
 
 #else
@@ -26,6 +27,7 @@ struct context
 <%
 interface('context',
     virtual('finish', returns='void', const=True)
+    virtual('set_handle_ndx', returns='void', input='int', const=False)          
 )
 %>
 

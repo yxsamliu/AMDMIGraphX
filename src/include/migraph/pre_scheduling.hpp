@@ -9,7 +9,8 @@ struct program;
 
 struct pre_scheduling
 {
-    std::function<float(std::string&)> weight_func;
+    std::function<std::pair<int,int>(std::string&)> weight_func;
+    int num_of_streams;
     std::string name() const { return "pre scheduling"; }
     void apply(program& p) const;
 };

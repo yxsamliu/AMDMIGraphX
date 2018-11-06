@@ -14,6 +14,7 @@
 #include <migraph/fwd_conv_batchnorm_rewrite.hpp>
 #include <migraph/pre_scheduling.hpp>
 #include <migraph/gpu/machine_model.hpp>
+#include <migraph/gpu/legalize.hpp>
 
 namespace migraph {
 namespace gpu {
@@ -21,7 +22,8 @@ namespace gpu {
 std::vector<pass> target::get_passes(migraph::context& gctx) const
 {
     auto& ctx                                      = any_cast<context>(gctx);
-    std::function<float(std::string&)> weight_func = op_weight();
+    std::function<std::pair<int,int>(std::string&)> weight_func = op_info();
+    int num_of_streams = stream_info().num_of_streams();
     // clang-format off
     return
     {
@@ -30,13 +32,14 @@ std::vector<pass> target::get_passes(migraph::context& gctx) const
         dead_code_elimination{},
         auto_contiguous{},
         simplify_reshapes{},
-        pre_scheduling{weight_func},            
         dead_code_elimination{},
+        pre_scheduling{weight_func, num_of_streams},            
         lowering{ctx},
         fuse_ops{&ctx},
         dead_code_elimination{},
         eliminate_contiguous{},
         dead_code_elimination{},
+        legalize{&ctx},            
         memory_coloring{"hip::allocate"},            
         write_literals{&ctx},
         eliminate_workspace{},
@@ -51,8 +54,17 @@ std::string target::name() const { return "miopen"; }
 
 migraph::context target::get_context() const
 {
+    std::function<std::pair<int,int>(std::string&)> weight_func = op_info();
+    int num_of_streams = stream_info().num_of_streams();
+    std::vector<shared<miopen_handle>> handles;
+    handles.push_back(share(make_obj<miopen_handle>(&miopenCreate)));
+    for (int i = 0; i < num_of_streams; ++i)
+    {
+        hipStream_t s;
+        handles.push_back(share(make_obj<miopen_handle>(&miopenCreateWithStream, s)));
+    }
     return context{
-        share(make_obj<miopen_handle>(&miopenCreate)), share(create_rocblas_handle_ptr()), {}};
+        handles, share(create_rocblas_handle_ptr()), {}};
 }
 } // namespace gpu
 } // namespace migraph

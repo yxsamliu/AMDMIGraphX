@@ -40,8 +40,10 @@ struct miopen_apply
 
     void apply()
     {
+        int orig_stream = ctx.handle_ndx;
         for(auto it = prog->begin(); it != prog->end(); it++)
         {
+            ctx.set_handle_ndx(it->get_stream());
             auto s = it->get_shape();
             if(it->name() == "convolution")
             {
@@ -76,6 +78,7 @@ struct miopen_apply
                 check_shape(s, apply_softmax(it));
             }
         }
+        ctx.set_handle_ndx(orig_stream);
     }
 
     instruction_ref insert_allocation(instruction_ref ins, const shape& s, std::string tag = "")

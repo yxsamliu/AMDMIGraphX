@@ -7,6 +7,8 @@ namespace cpu {
 struct context
 {
     void finish() const {}
+    void set_handle_ndx(int ndx) {handle_ndx = ndx;}
+    int handle_ndx = 0;
 };
 
 } // namespace cpu

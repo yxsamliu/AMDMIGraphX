@@ -96,6 +96,12 @@ struct context
         return (*this).private_detail_te_get_handle().finish();
     }
 
+    void set_handle_ndx(int ndx)
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().set_handle_ndx(ndx);
+    }
+
     private:
     struct private_detail_te_handle_base_type
     {
@@ -104,6 +110,7 @@ struct context
         virtual const std::type_info& type() const                                = 0;
 
         virtual void finish() const = 0;
+        virtual void set_handle_ndx(int) = 0;
     };
 
     template <typename PrivateDetailTypeErasedT>
@@ -135,6 +142,8 @@ struct context
         const std::type_info& type() const override { return typeid(private_detail_te_value); }
 
         void finish() const override { return private_detail_te_value.finish(); }
+        void set_handle_ndx(int ndx) override { return private_detail_te_value.set_handle_ndx(ndx); }
+
 
         PrivateDetailTypeErasedT private_detail_te_value;
     };

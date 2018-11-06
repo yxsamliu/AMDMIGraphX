@@ -88,7 +88,7 @@ struct fusion
 
     void compile(context& ctx)
     {
-        auto status = miopenCompileFusionPlan(ctx.handle.get(), fp.get());
+        auto status = miopenCompileFusionPlan(ctx.handle[ctx.handle_ndx].get(), fp.get());
         if(status != miopenStatusSuccess)
             MIGRAPH_THROW("Compiling fusion plan failed");
     }
@@ -100,7 +100,7 @@ struct fusion
     {
         auto x_td   = make_tensor(x.get_shape());
         auto y_td   = make_tensor(y.get_shape());
-        auto status = miopenExecuteFusionPlan(ctx.handle.get(),
+        auto status = miopenExecuteFusionPlan(ctx.handle[ctx.handle_ndx].get(),
                                               fp.get(),
                                               x_td.get(),
                                               x.implicit(),
