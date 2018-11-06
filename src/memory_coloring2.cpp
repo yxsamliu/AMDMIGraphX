@@ -79,7 +79,7 @@ struct allocation_color
 {
     std::unordered_map<instruction_ref, int> ins2color;
     std::map<int, instruction_set> color2ins;
-    
+
     // Add a color for an instruction. Each color must be a positive integer.
     void add_color(instruction_ref ins, int color)
     {
@@ -126,9 +126,8 @@ struct allocation_color
         auto start = colors.find(0);
         if(start == colors.end())
             return 0;
-        auto it = std::adjacent_find(start, colors.end(), [](int x, int y) {
-            return (x + 1) == y;
-        });
+        auto it =
+            std::adjacent_find(start, colors.end(), [](int x, int y) { return (x + 1) == y; });
         auto last = (it == colors.end()) ? std::prev(it) : std::next(it);
         return *last + 1;
     }
@@ -143,7 +142,7 @@ struct allocation_color
                        conflict_table.end(),
                        std::back_inserter(conflict_queue),
                        [](auto&& pp) { return pp.first; });
-        
+
         // Sort the conflict queue so we process the allocation with the least
         // number of adjacent allocations first
         std::sort(conflict_queue.begin(), conflict_queue.end(), [&](auto x, auto y) {
@@ -193,7 +192,7 @@ struct allocation_color
 void memory_coloring2::apply(program& p) const
 {
     auto conflict_table = build_conflict_table(p, allocation_op);
-    auto ac = allocation_color::build(conflict_table);
+    auto ac             = allocation_color::build(conflict_table);
 
     const std::size_t alignment = 32;
     // Total memory
