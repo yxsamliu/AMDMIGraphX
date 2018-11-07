@@ -60,7 +60,7 @@ migraph::context target::get_context() const
     handles.push_back(share(make_obj<miopen_handle>(&miopenCreate)));
     for (int i = 0; i < num_of_streams; ++i)
     {
-        hipStream_t s;
+        hipStream_t s = nullptr;
         handles.push_back(share(make_obj<miopen_handle>(&miopenCreateWithStream, s)));
     }
     return context{

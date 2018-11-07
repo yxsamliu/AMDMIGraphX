@@ -5,6 +5,7 @@
 #include <migraph/gpu/context.hpp>
 #include <migraph/gpu/context.hpp>
 #include <migraph/gpu/convolution.hpp>
+#include <hip/hip_runtime.h>
 
 namespace migraph {
 namespace gpu {

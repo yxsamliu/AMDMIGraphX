@@ -3,6 +3,7 @@
 
 #include <migraph/operators.hpp>
 #include <utility>
+#include <hip/hip_runtime.h>
 
 namespace migraph {
 namespace gpu {
@@ -14,6 +15,8 @@ migraph::argument to_gpu(migraph::argument arg, bool host = false);
 migraph::argument from_gpu(migraph::argument arg);
 
 void gpu_sync();
+
+void stream_sync(hipStream_t);    
 
 void copy_to_gpu(char* dst, const char* src, std::size_t size);
 
@@ -81,7 +84,50 @@ struct hip_memcpy
     }
     std::size_t offset = 0;
 };
+
+struct hip_stream_sync
+{
+    hipStream_t stream;
+    std::string name() const { return "hip_stream_sync"; }
+    shape compute_shape(const std::vector<shape>& inputs) const
+    {
+        if (inputs.empty())
+            return {};
+        else
+            return inputs.front();
+    }
+    argument compute(context&, const shape&, const std::vector<argument>& args) const
+    {
+        stream_sync(stream);
+        if(args.empty())
+            return {};
+        else
+            return args.front();
+    }
+};
+    
 } // namespace gpu
 } // namespace migraph
 
 #endif
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

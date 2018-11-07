@@ -5,14 +5,26 @@ namespace gpu {
 
 void legalize::apply(program& prog) const
 {
+    //    if(!enabled(MIGRAPH_DISABLE_PRE_SCHEDULING{}))
+        return;
+    
     for(auto it = prog.begin(); it != prog.end(); it++)
     {
-        if (it->get_stream() == default_stream)
+        int stream = it->get_stream();
+        if (stream == default_stream)
             continue;
-        if(it->name() == "gpu::convolution")
+        
+        for(auto&& arg : it->inputs())
         {
-            auto op = any_cast<miopen_convolution>(it->get_operator());
-
+            int arg_s = arg->get_stream();
+            if (arg_s == default_stream)
+                continue;
+            if (arg_s != stream) {
+                hipStream_t hip_s;
+                miopenGetStream(&(*(ctx->handle[stream])), &hip_s);
+                prog.insert_instruction(it, hip_stream_sync{hip_s});
+                break;
+            }
         }
     }
 };
