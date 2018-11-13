@@ -95,6 +95,12 @@ void copy_to_gpu(char* dst, const char* src, std::size_t size)
     hipMemcpy(dst, src, size, hipMemcpyHostToDevice);
 }
 
-void stream_sync(hipStream_t stream) { hipStreamSynchronize(stream); }
+void stream_sync(hipStream_t stream)
+{
+    
+    auto status = hipStreamSynchronize(stream);
+    if (status != hipSuccess)
+        MIGRAPH_THROW("Failed to sync stream");
+}
 } // namespace gpu
 } // namespace migraph

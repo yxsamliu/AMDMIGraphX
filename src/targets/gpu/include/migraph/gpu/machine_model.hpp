@@ -2,6 +2,7 @@
 #define MIGRAPH_GUARD_MIGRAPHLIB_MIOPEN_MACHINE_MODEL_HPP
 #include <string>
 #include <unordered_map>
+#include <migraph/pass_config.hpp>
 
 namespace migraph {
 namespace gpu {
@@ -41,7 +42,13 @@ struct op_info
 
 struct stream_info
 {
-    int num_of_streams() { return 2; }
+    int num_of_streams()
+    {
+        if (enabled(MIGRAPH_DISABLE_PRE_SCHEDULING{}))
+            return 0;
+        else
+            return 2;
+    }
 };
 } // namespace gpu
 } // namespace migraph

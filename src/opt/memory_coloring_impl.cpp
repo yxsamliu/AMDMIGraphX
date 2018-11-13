@@ -125,55 +125,59 @@ void memory_coloring_impl::build()
                 live_set.erase(range.vn);
             }
         }
-        else if(!is_param(iter) && !is_outline(iter) && !is_check_context(iter))
+        else if(!is_param(iter) && !is_outline(iter) && !is_check_context(iter)
+                && !iter->outputs().empty())
         {
             is_dead = true;
         }
-        int tie_ndx = get_input_tie_ndx(iter);
-        int cnt     = -1;
-        for(auto&& arg : iter->inputs())
+        if (!iter->inputs().empty())
         {
-            cnt++;
-            if(is_param(arg) || is_outline(arg))
+            int tie_ndx = get_input_tie_ndx(iter);
+            int cnt     = -1;
+            for(auto&& arg : iter->inputs())
             {
-                if(is_output_param(arg))
-                    is_dead = false;
-                if(def_interval != nullptr)
+                cnt++;
+                if(is_param(arg) || is_outline(arg))
                 {
-                    def_interval->is_live_on_entry = true;
+                    if(is_output_param(arg))
+                        is_dead = false;
+                    if(def_interval != nullptr)
+                    {
+                        def_interval->is_live_on_entry = true;
+                    }
+                    continue;
                 }
-                continue;
-            }
-            const instruction* p_arg = &(*arg);
-            if(cnt == tie_ndx && (def_interval != nullptr))
-            {
-                // input memory is used as this instruction's output.
-                // def is considered as use. Coalesce the live intervals.
-                def_interval->add_use(cur_points);
-                instr2_live[p_arg] = def_interval;
-            }
-            else if(instr2_live.find(p_arg) == instr2_live.end())
-            {
-                // First time see a use, create a live interval.
-                int id                = num_of_lives++;
-                interval_ptr interval = &(live_intervals[id]);
-                interval->id          = id;
-                interval->segment.end = cur_points;
-                interval->segment.vn  = ++max_value_number;
-                interval->add_use(cur_points);
-                instr2_live[p_arg] = interval;
-                add_conflicts(live_set, max_value_number);
-                live_set.insert(max_value_number);
-                live_ranges[max_value_number] = &(interval->segment);
-                earliest_end_point            = cur_points;
-                if(latest_end_point == -1)
-                    latest_end_point = cur_points;
-            }
-            else
-            {
-                interval_ptr interval = instr2_live[p_arg];
-                interval->add_use(cur_points);
-                assert(live_set.find(interval->id) != live_set.end());
+                const instruction* p_arg = &(*arg);
+                if(cnt == tie_ndx && (def_interval != nullptr))
+                {
+                    // input memory is used as this instruction's output.
+                    // def is considered as use. Coalesce the live intervals.
+                    def_interval->add_use(cur_points);
+                    instr2_live[p_arg] = def_interval;
+                }
+                else if(instr2_live.find(p_arg) == instr2_live.end())
+                {
+                    // First time see a use, create a live interval.
+                    int id                = num_of_lives++;
+                    interval_ptr interval = &(live_intervals[id]);
+                    interval->id          = id;
+                    interval->segment.end = cur_points;
+                    interval->segment.vn  = ++max_value_number;
+                    interval->add_use(cur_points);
+                    instr2_live[p_arg] = interval;
+                    add_conflicts(live_set, max_value_number);
+                    live_set.insert(max_value_number);
+                    live_ranges[max_value_number] = &(interval->segment);
+                    earliest_end_point            = cur_points;
+                    if(latest_end_point == -1)
+                        latest_end_point = cur_points;
+                }
+                else
+                {
+                    interval_ptr interval = instr2_live[p_arg];
+                    interval->add_use(cur_points);
+                    assert(live_set.find(interval->id) != live_set.end());
+                }
             }
         }
         if(is_dead)
