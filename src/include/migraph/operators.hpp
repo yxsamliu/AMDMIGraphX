@@ -719,6 +719,23 @@ struct outline
     }
 };
 
+struct write_literal
+{
+    std::size_t offset = 0;
+    std::string name() const { return "write_literal"; }
+    shape compute_shape(std::vector<shape> inputs) const
+    {
+        check_shapes{inputs}.has(2);
+        return inputs.at(1);
+    }
+    argument compute(context&, const shape&, const std::vector<argument>&) const
+    {
+        MIGRAPH_THROW("not computable");
+    }
+};
+
+    
+
 } // namespace op
 } // namespace migraph
 

@@ -4,6 +4,8 @@ namespace migraph {
 
 void memory_coloring_impl::run()
 {
+    if(enabled(MIGRAPH_UNIFY_MEMORY_COLORING{}))
+        unify_literals = true;
     MIGRAPH_DEBUG(dump("---Before memory coloring---"));
     MIGRAPH_DEBUG(dump_program());
     register_operand_alias();
@@ -12,13 +14,16 @@ void memory_coloring_impl::run()
     {
         MIGRAPH_DEBUG(dump_intervals());
         // Coloring
+        bool did_it = false;
         while(!alloc_queue.empty())
         {
             interval_ptr interval = alloc_queue.top();
-            allocate(interval);
+            if (allocate(interval))
+                did_it = true;
             alloc_queue.pop();
         }
-        rewrite();
+        if (did_it)
+            rewrite();
         MIGRAPH_DEBUG(verify());
     }
 }
@@ -117,11 +122,11 @@ void memory_coloring_impl::build()
                 live_range& range        = def_interval->segment;
                 def_interval->result     = iter->get_shape();
                 def_interval->is_literal = is_lit;
-                if(!is_lit || unify_literals)
-                    alloc_queue.push(def_interval);
                 range.begin             = cur_points;
                 def_interval->def_point = cur_points;
                 range.size              = (iter->get_shape()).bytes();
+                if(!is_lit || unify_literals)
+                    alloc_queue.push(def_interval);
                 live_set.erase(range.vn);
             }
         }
@@ -169,8 +174,6 @@ void memory_coloring_impl::build()
                     live_set.insert(max_value_number);
                     live_ranges[max_value_number] = &(interval->segment);
                     earliest_end_point            = cur_points;
-                    if(latest_end_point == -1)
-                        latest_end_point = cur_points;
                 }
                 else
                 {
@@ -237,14 +240,11 @@ void memory_coloring_impl::rewrite()
                 p_program->replace_instruction(
                     ins, op::load{ins->inputs().at(0)->get_shape(), offset}, scratch_param);
             }
-            else if(is_literal(ins))
+            else if(is_literal(ins) && unify_literals)
             {
-#if 0                
-                auto pre      = p_program->add_literal(ins->lit);
-f                bool pre_copy = (interval->get_begin() < earliest_end_point);
-                p_program->replace_instruction(
-                    ins, write_literal{offset, pre_copy}, scratch_param, pre);
-#endif
+                auto pre = p_program->add_literal(ins->get_literal());
+                p_program->move_instruction(pre, ins);
+                p_program->replace_instruction(ins, op::write_literal{offset}, scratch_param, pre);
             }
         }
     }

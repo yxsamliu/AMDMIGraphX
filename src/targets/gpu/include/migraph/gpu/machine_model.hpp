@@ -15,6 +15,7 @@ struct op_info
         weight_map["pooling"]     = std::make_pair(2, 0);
         weight_map["gemm"]        = std::make_pair(2, 0);
         weight_map["broadcast"]   = std::make_pair(1, 1);
+        weight_map["contiguous"]   = std::make_pair(1, 1);
         weight_map["transpose"]   = std::make_pair(1, 1);
         weight_map["@param"]      = std::make_pair(1, 1);
         weight_map["@literal"]    = std::make_pair(1, 1);

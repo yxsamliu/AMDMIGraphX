@@ -37,6 +37,7 @@ add_library(migraph_gpu
     write_literals.cpp
     rocblas.cpp
     legalize.cpp
+    lowering_memory_coloring.cpp
 )
 rocm_clang_tidy_check(migraph_gpu)
 target_link_libraries(migraph_gpu migraph MIOpen migraph_device roc::rocblas)

@@ -88,13 +88,22 @@ argument from_gpu(argument arg)
     return result;
 }
 
-void gpu_sync() { hipDeviceSynchronize(); }
+void gpu_sync()
+{
+    hipDeviceSynchronize();
+}
 
 void copy_to_gpu(char* dst, const char* src, std::size_t size)
 {
     hipMemcpy(dst, src, size, hipMemcpyHostToDevice);
 }
+    
+void copy_to_gpu_async(char* dst, const char* src, std::size_t size, hipStream_t stream)
+{
+    hipMemcpyAsync(dst, src, size, hipMemcpyHostToDevice, stream);
 
+}
+    
 void stream_sync(hipStream_t stream)
 {
     

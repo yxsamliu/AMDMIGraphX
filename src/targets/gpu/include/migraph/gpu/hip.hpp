@@ -19,6 +19,7 @@ void gpu_sync();
 void stream_sync(hipStream_t);    
 
 void copy_to_gpu(char* dst, const char* src, std::size_t size);
+void copy_to_gpu_async(char* dst, const char* src, std::size_t size, hipStream_t);
 
 struct hip_allocate
 {
@@ -70,19 +71,20 @@ struct hip_write
     }
 };
 
-struct hip_memcpy
+struct hip_memcpy_async
 {
-    std::string name() const { return "hip_memcpy"; }
+    std::string name() const { return "hip_memcpy_async"; }
     shape compute_shape(std::vector<shape> inputs) const { return inputs.at(1); }
     argument compute(context&, shape output_shape, std::vector<argument> args) const
     {
         char* dst        = args.at(0).data() + offset;
         const char* src  = args.at(1).data();
         std::size_t size = args.at(1).get_shape().bytes();
-        copy_to_gpu(dst, src, size);
+        copy_to_gpu_async(dst, src, size, stream);
         return {std::move(output_shape), dst};
     }
     std::size_t offset = 0;
+    hipStream_t stream;
 };
 
 struct hip_stream_sync

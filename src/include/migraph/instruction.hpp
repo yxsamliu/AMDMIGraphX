@@ -12,6 +12,11 @@ namespace migraph {
 
 shape compute_shape(const operation& op, const std::vector<instruction_ref>& args);
 
+enum instruction_mask {
+    RECORD_EVENT = 0,
+    WAIT_EVENT = 1
+};
+
 struct instruction
 {
     instruction() {}
@@ -39,6 +44,14 @@ struct instruction
 
     int get_stream() const;
     void set_stream(int);
+    int get_event() const;
+    void set_event(int);
+    void add_mask(instruction_mask m)
+    {
+        if ((mask & ( 1 << m)) == 0)
+            mask += (1 << m);
+    }
+    bool has_mask(instruction_mask m) const { return ((mask & ( 1 << m)) != 0); }
 
     std::string name() const;
 
@@ -81,6 +94,8 @@ struct instruction
     std::vector<instruction_ref> arguments;
     literal lit;
     int stream = 0;
+    int mask = 0;
+    int event = -1;
 };
 } // namespace migraph
 

@@ -62,6 +62,11 @@ static void print_program(std::ostream& os, const program& p, F annonate)
         }
         if (ins->get_stream() > 0)
             os << "(stream=" <<  ins->get_stream() << ")";
+        if (ins->has_mask(WAIT_EVENT))
+            os << " wait ";
+        if (ins->has_mask(RECORD_EVENT))
+            os << " record=" << ins->get_event();
+            
         os << " -> " << ins->get_shape();
 
         annonate(ins, names);
@@ -304,7 +309,8 @@ argument generic_eval(const program& p,
     values.reserve(16);
     for(auto ins : iterator_for(p))
     {
-        ctx.set_handle_ndx(ins->get_stream());
+        int stream = ins->get_stream();
+        ctx.set_handle_ndx(stream);
         if(ins->name() == "@literal")
         {
             results.emplace(ins, trace(ins, [&] { return ins->get_literal().get_argument(); }));
@@ -328,10 +334,30 @@ argument generic_eval(const program& p,
                     assert(results.find(i) != results.end());
                     return results[i];
                 });
-            
+            if (ins->has_mask(WAIT_EVENT))
+                {
+                for(auto&& arg : ins->inputs()) {
+                    int arg_s = arg->get_stream();
+                    if ((arg_s > 0) && (arg_s != stream))
+                    {
+                        int event = arg->get_event();
+                        assert(event >= 0);
+                        ctx.wait_event(stream, event);
+                    }
+                }
+            }
+
+            int event = -1;
+            if (ins->has_mask(RECORD_EVENT))
+            {
+                event = ctx.create_event();
+                ins->set_event(event);
+            }
             results.emplace(ins, trace(ins, [&] {
                         return ins->get_operator().compute(ctx, ins->get_shape(), values);
                             }));
+            if (event != -1)
+                ctx.record_event(event, stream);                
         }
         assert(results.find(ins) != results.end());
     }

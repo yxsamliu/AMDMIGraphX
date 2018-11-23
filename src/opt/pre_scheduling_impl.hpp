@@ -20,7 +20,6 @@ struct dag_node
         partition = -1;
         sched_cycle = -1;
         earliest_cycle = -1;
-        need_sync = false;
     }
     int weight;
     int run_on_cpu;
@@ -31,11 +30,19 @@ struct dag_node
     int partition;
     int sched_cycle;
     int earliest_cycle = -1;
-    bool need_sync;
     instruction_ref ins;
-    bool is_mem() const
+    bool is_literal() const
     {
         return (ins->name() == "@literal");
+    }
+    bool is_mem_cpy() const
+    {
+        return (enabled(MIGRAPH_UNIFY_MEMORY_COLORING{}) && is_literal());
+
+    }
+    bool can_use_stream() const
+    {
+        return (!run_on_cpu || is_mem_cpy());
     }
     
 #ifdef MIGRAPH_DEBUG_OPT

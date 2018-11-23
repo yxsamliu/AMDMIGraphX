@@ -102,6 +102,24 @@ struct context
         return (*this).private_detail_te_get_handle().set_handle_ndx(ndx);
     }
 
+    int create_event()
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().create_event();
+    }
+
+    void record_event(int event, int stream)
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().record_event(event, stream);
+    }
+
+    void wait_event(int stream, int event)
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().wait_event(stream, event);      
+    }
+
     private:
     struct private_detail_te_handle_base_type
     {
@@ -111,6 +129,9 @@ struct context
 
         virtual void finish() const = 0;
         virtual void set_handle_ndx(int) = 0;
+        virtual int create_event() = 0;
+        virtual void record_event(int, int) = 0;
+        virtual void wait_event(int, int) = 0;
     };
 
     template <typename PrivateDetailTypeErasedT>
@@ -143,7 +164,9 @@ struct context
 
         void finish() const override { return private_detail_te_value.finish(); }
         void set_handle_ndx(int ndx) override { return private_detail_te_value.set_handle_ndx(ndx); }
-
+        int create_event() override { return private_detail_te_value.create_event(); }
+        void record_event(int event, int stream) override { return private_detail_te_value.record_event(event, stream); }
+        void wait_event(int stream, int event) override { return private_detail_te_value.wait_event(stream, event); }
 
         PrivateDetailTypeErasedT private_detail_te_value;
     };
