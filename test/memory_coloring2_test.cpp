@@ -26,8 +26,8 @@ struct allocate
         return inputs.front();
     }
     migraphx::argument compute(migraphx::context&,
-                               const migraphx::shape& output_shape,
-                               const std::vector<migraphx::argument>&) const
+                              const migraphx::shape& output_shape,
+                              const std::vector<migraphx::argument>&) const
     {
         return {output_shape};
     }
@@ -488,7 +488,7 @@ TEST_CASE(test33)
     auto a5 = add_alloc(p, {migraphx::shape::float_type, {40}});
     p.add_instruction(pass_op{}, a5, p1);
     p.compile(memory_coloring_target{});
-    CHECK(p.get_parameter_shape("scratch").bytes() == 224);
+    CHECK(p.get_parameter_shape("scratch").bytes() == 192);
     CHECK(no_allocate(p));
 }
 
@@ -610,3 +610,4 @@ TEST_CASE(literal_test)
 }
 
 int main(int argc, const char* argv[]) { test::run(argc, argv); }
+

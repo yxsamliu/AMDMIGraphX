@@ -128,6 +128,8 @@ struct allocation_color
         if(it != ins2color.end())
         {
             color2ins[it->second].erase(ins);
+            if(color2ins[it->second].empty())
+                color2ins.erase(it->second);
             ins2color.erase(it);
         }
     }
@@ -223,7 +225,7 @@ struct allocation_color
                 }
             }
         }
-        // Reduce the number of colors used
+        // Reduce the number of colors 
         for(auto parent : conflict_queue)
         {
             auto children = conflict_table.at(parent);
@@ -237,17 +239,28 @@ struct allocation_color
             // Get the color for the parent
             auto parent_color = ac.get_color(parent);
             colors.insert(parent_color);
-            auto color = next_color(colors);
             assert(parent_color != -1);
-            assert(color != -1);
-            if (color < ac.colors() and ac.instructions(color) > 0)
+
+            std::vector<int> next_colors;
+            auto c = next_color(colors);
+            while(c < ac.colors())
+            {
+                if(ac.instructions(c) > 0)
+                    next_colors.push_back(c);
+                c = next_color(colors);
+            }
+
+            std::sort(next_colors.begin(), next_colors.end(), [&](int x, int y) {
+                return ac.max_bytes(x) < ac.max_bytes(y);
+            });
+
+            for(auto color:next_colors)
             {
                 auto bytes = ac.max_bytes(color);
-                if(bytes >= parent->get_shape().bytes() or ac.instructions(parent_color) == 1) 
+                if(bytes >= parent->get_shape().bytes() or ac.instructions(parent_color) == 1 or ac.instructions(color) == 1) 
                 {
-                    std::cout << bytes << " >= " << parent->get_shape().bytes() << std::endl;
-                    std::cout << "Reduce color from " << parent_color << " to " << color << std::endl;
                     ac.add_color(parent, color);
+                    break;
                 }
             }
         }
