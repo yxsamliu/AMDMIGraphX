@@ -26,8 +26,8 @@ struct allocate
         return inputs.front();
     }
     migraphx::argument compute(migraphx::context&,
-                              const migraphx::shape& output_shape,
-                              const std::vector<migraphx::argument>&) const
+                               const migraphx::shape& output_shape,
+                               const std::vector<migraphx::argument>&) const
     {
         return {output_shape};
     }
@@ -610,4 +610,3 @@ TEST_CASE(literal_test)
 }
 
 int main(int argc, const char* argv[]) { test::run(argc, argv); }
-
