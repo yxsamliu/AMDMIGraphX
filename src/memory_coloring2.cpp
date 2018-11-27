@@ -84,6 +84,24 @@ struct allocation_color
     std::unordered_map<instruction_ref, int> ins2color;
     std::map<int, instruction_set> color2ins;
 
+    std::size_t colors() const
+    {
+        // return color2ins.size();
+        if(color2ins.empty())
+            return 0;
+        else
+            return std::prev(color2ins.end())->first + 1;
+    }
+
+    std::size_t instructions(int color) const
+    {
+        auto it = color2ins.find(color);
+        if(it == color2ins.end())
+            return 0;
+        else
+            return it->second.size();
+    }
+
     // Add a color for an instruction. Each color must be a positive integer.
     void add_color(instruction_ref ins, int color)
     {
@@ -121,7 +139,10 @@ struct allocation_color
         auto it   = std::max_element(is.begin(), is.end(), [](auto x, auto y) {
             return x->get_shape().bytes() < y->get_shape().bytes();
         });
-        return (*it)->get_shape().bytes();
+        if(it == is.end())
+            return 0;
+        else
+            return (*it)->get_shape().bytes();
     }
 
     // Insert next available color in the set
@@ -199,6 +220,34 @@ struct allocation_color
                     // Get next available color
                     color = next_color(colors);
                     ac.add_color(child, color);
+                }
+            }
+        }
+        // Reduce the number of colors used
+        for(auto parent : conflict_queue)
+        {
+            auto children = conflict_table.at(parent);
+            // This set is to track the colors already processed
+            std::set<int> colors;
+            // Add all colors for the children to the colors already processed
+            std::transform(children.begin(),
+                           children.end(),
+                           std::inserter(colors, colors.begin()),
+                           [&](auto child) { return ac.get_color(child); });
+            // Get the color for the parent
+            auto parent_color = ac.get_color(parent);
+            colors.insert(parent_color);
+            auto color = next_color(colors);
+            assert(parent_color != -1);
+            assert(color != -1);
+            if (color < ac.colors() and ac.instructions(color) > 0)
+            {
+                auto bytes = ac.max_bytes(color);
+                if(bytes >= parent->get_shape().bytes() or ac.instructions(parent_color) == 1) 
+                {
+                    std::cout << bytes << " >= " << parent->get_shape().bytes() << std::endl;
+                    std::cout << "Reduce color from " << parent_color << " to " << color << std::endl;
+                    ac.add_color(parent, color);
                 }
             }
         }
