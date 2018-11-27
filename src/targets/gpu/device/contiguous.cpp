@@ -1,8 +1,9 @@
 
-#include <migraph/gpu/device/contiguous.hpp>
-#include <migraph/gpu/device/nary.hpp>
+#include <migraphx/gpu/device/contiguous.hpp>
+#include <migraphx/gpu/device/nary.hpp>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 namespace gpu {
 namespace device {
 
@@ -13,4 +14,5 @@ void contiguous(hipStream_t stream, argument result, argument arg)
 
 } // namespace device
 } // namespace gpu
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

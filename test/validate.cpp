@@ -1,25 +1,25 @@
-#include <migraph/program.hpp>
-#include <migraph/instruction.hpp>
+#include <migraphx/program.hpp>
+#include <migraphx/instruction.hpp>
 #include <basic_ops.hpp>
 #include <test.hpp>
 #include <rob.hpp>
 
-void simple_test()
+TEST_CASE(simple_test)
 {
-    migraph::program p;
+    migraphx::program p;
 
     auto one = p.add_literal(1);
     auto two = p.add_literal(2);
     p.add_instruction(sum_op{}, one, two);
     EXPECT(bool{p.validate() == p.end()});
     auto result = p.eval({});
-    EXPECT(result == migraph::literal{3});
-    EXPECT(result != migraph::literal{4});
+    EXPECT(result == migraphx::literal{3});
+    EXPECT(result != migraphx::literal{4});
 }
 
-void out_of_order()
+TEST_CASE(out_of_order)
 {
-    migraph::program p;
+    migraphx::program p;
 
     auto one = p.add_literal(1);
     auto two = p.add_literal(2);
@@ -28,9 +28,9 @@ void out_of_order()
     EXPECT(bool{p.validate() == ins});
 }
 
-void incomplete_args()
+TEST_CASE(incomplete_args)
 {
-    migraph::program p;
+    migraphx::program p;
 
     auto one = p.add_literal(1);
     auto two = p.add_literal(2);
@@ -40,13 +40,13 @@ void incomplete_args()
 }
 
 MIGRAPH_ROB(access_ins_arguments,
-            std::vector<migraph::instruction_ref>,
-            migraph::instruction,
+            std::vector<migraphx::instruction_ref>,
+            migraphx::instruction,
             arguments)
 
-void invalid_args()
+TEST_CASE(invalid_args)
 {
-    migraph::program p;
+    migraphx::program p;
 
     auto one = p.add_literal(1);
     auto two = p.add_literal(2);
@@ -55,10 +55,4 @@ void invalid_args()
     EXPECT(bool{p.validate() == p.begin()});
 }
 
-int main()
-{
-    simple_test();
-    out_of_order();
-    incomplete_args();
-    invalid_args();
-}
+int main(int argc, const char* argv[]) { test::run(argc, argv); }

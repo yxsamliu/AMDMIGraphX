@@ -1,25 +1,28 @@
-#include <migraph/gpu/target.hpp>
-#include <migraph/gpu/lowering.hpp>
-#include <migraph/memory_coloring2.hpp>
-#include <migraph/gpu/write_literals.hpp>
-#include <migraph/gpu/context.hpp>
-#include <migraph/gpu/eliminate_workspace.hpp>
-#include <migraph/eliminate_allocation.hpp>
-#include <migraph/gpu/fuse_ops.hpp>
-#include <migraph/check_context.hpp>
-#include <migraph/auto_contiguous.hpp>
-#include <migraph/dead_code_elimination.hpp>
-#include <migraph/simplify_reshapes.hpp>
-#include <migraph/simplify_algebra.hpp>
-#include <migraph/constant_propagate.hpp>
-#include <migraph/eliminate_contiguous.hpp>
-#include <migraph/common_subexpression_elimination.hpp>
-#include <migraph/fwd_conv_batchnorm_rewrite.hpp>
+#include <migraphx/gpu/target.hpp>
+#include <migraphx/gpu/lowering.hpp>
+#include <migraphx/memory_coloring2.hpp>
+#include <migraphx/gpu/write_literals.hpp>
+#include <migraphx/gpu/context.hpp>
+#include <migraphx/gpu/eliminate_workspace.hpp>
+#include <migraphx/eliminate_allocation.hpp>
+#include <migraphx/gpu/fuse_ops.hpp>
+#include <migraphx/check_context.hpp>
+#include <migraphx/auto_contiguous.hpp>
+#include <migraphx/dead_code_elimination.hpp>
+#include <migraphx/simplify_reshapes.hpp>
+#include <migraphx/simplify_algebra.hpp>
+#include <migraphx/constant_propagate.hpp>
+#include <migraphx/eliminate_contiguous.hpp>
+#include <migraphx/common_subexpression_elimination.hpp>
+#include <migraphx/fwd_conv_batchnorm_rewrite.hpp>
+#include <migraphx/eliminate_concat.hpp>
+#include <migraphx/gpu/concat_gpu_opt.hpp>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 namespace gpu {
 
-std::vector<pass> target::get_passes(migraph::context& gctx) const
+std::vector<pass> target::get_passes(migraphx::context& gctx) const
 {
     auto& ctx = any_cast<context>(gctx);
     // clang-format off
@@ -38,6 +41,8 @@ std::vector<pass> target::get_passes(migraph::context& gctx) const
         simplify_reshapes{},
         dead_code_elimination{},
         lowering{ctx},
+        eliminate_concat{concat_gpu_optimization{}},
+        dead_code_elimination{},
         eliminate_contiguous{},
         dead_code_elimination{},
         fuse_ops{&ctx},
@@ -53,6 +58,7 @@ std::vector<pass> target::get_passes(migraph::context& gctx) const
 
 std::string target::name() const { return "miopen"; }
 
-migraph::context target::get_context() const { return context{}; }
+migraphx::context target::get_context() const { return context{}; }
 } // namespace gpu
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

@@ -10,19 +10,21 @@ if(NOT TARGET MIOpen)
     message(SEND_ERROR "Cant find miopen")
 endif()
 
-add_library(migraph_device
+add_library(migraphx_device
     device/add.cpp
+    device/sin.cpp
     device/add_relu.cpp
     device/contiguous.cpp
     device/mul.cpp
     device/concat.cpp
 )
-rocm_clang_tidy_check(migraph_device)
-target_link_libraries(migraph_device migraph hip::device)
-target_include_directories(migraph_device PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
-target_include_directories(migraph_device PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/device/include>)
+set_target_properties(migraphx_device PROPERTIES EXPORT_NAME device)
+rocm_clang_tidy_check(migraphx_device)
+target_link_libraries(migraphx_device migraphx hip::device -Wno-invalid-command-line-argument -amdgpu-target=gfx803 -amdgpu-target=gfx900 -amdgpu-target=gfx903)
+target_include_directories(migraphx_device PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+target_include_directories(migraphx_device PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/device/include>)
 
-add_library(migraph_gpu
+add_library(migraphx_gpu
     eliminate_workspace.cpp
     fuse_ops.cpp
     hip.cpp
@@ -37,20 +39,20 @@ add_library(migraph_gpu
     relu.cpp
     leaky_relu.cpp
     add.cpp
+    sin.cpp
     mul.cpp
     batchnorm.cpp
     write_literals.cpp
     rocblas.cpp
 )
-rocm_clang_tidy_check(migraph_gpu)
-target_link_libraries(migraph_gpu migraph MIOpen migraph_device roc::rocblas)
-target_include_directories(migraph_gpu PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+set_target_properties(migraphx_gpu PROPERTIES EXPORT_NAME gpu)
+rocm_clang_tidy_check(migraphx_gpu)
+target_link_libraries(migraphx_gpu PUBLIC migraphx MIOpen roc::rocblas)
+target_link_libraries(migraphx_gpu PRIVATE migraphx_device)
 
-#install (TARGETS migraph_gpu
-#  LIBRARY DESTINATION /opt/rocm/lib)
-#install (DIRECTORY include/migraph DESTINATION /opt/rocm/include)
-
-#install (TARGETS migraph_device
-#  LIBRARY DESTINATION /opt/rocm/lib)
-#install (DIRECTORY include/migraph DESTINATION /opt/rocm/include)
+rocm_install_targets(
+  TARGETS migraphx_gpu migraphx_device
+  INCLUDE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 

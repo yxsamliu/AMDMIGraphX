@@ -1,22 +1,23 @@
-#include <migraph/auto_contiguous.hpp>
-#include <migraph/operators.hpp>
-#include <migraph/instruction.hpp>
+#include <migraphx/auto_contiguous.hpp>
+#include <migraphx/operators.hpp>
+#include <migraphx/instruction.hpp>
 #include <basic_ops.hpp>
 #include <test.hpp>
 
 struct contiguous_target
 {
     std::string name() const { return "contiguous"; }
-    std::vector<migraph::pass> get_passes(migraph::context&) const
+    std::vector<migraphx::pass> get_passes(migraphx::context&) const
     {
-        return {migraph::auto_contiguous{}};
+        return {migraphx::auto_contiguous{}};
     }
-    migraph::context get_context() const { return {}; }
+    migraphx::context get_context() const { return {}; }
 };
 
+// TODO: Add this test case
 void literal_broadcast()
 {
-    migraph::program p;
+    migraphx::program p;
     p.add_literal(get_2_broadcasted());
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().broadcasted());
@@ -25,9 +26,9 @@ void literal_broadcast()
     EXPECT(not p.get_shape().broadcasted());
 }
 
-void literal_transpose()
+TEST_CASE(literal_transpose)
 {
-    migraph::program p;
+    migraphx::program p;
     p.add_literal(get_2x2_transposed());
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().transposed());
@@ -36,13 +37,13 @@ void literal_transpose()
     EXPECT(not p.get_shape().transposed());
 }
 
-void after_literal_transpose()
+TEST_CASE(after_literal_transpose)
 {
-    migraph::program p;
+    migraphx::program p;
     auto l = p.add_literal(get_2x2());
     EXPECT(p.get_shape().standard());
     EXPECT(not p.get_shape().transposed());
-    auto t = p.add_instruction(migraph::op::transpose{{1, 0}}, l);
+    auto t = p.add_instruction(migraphx::op::transpose{{1, 0}}, l);
     p.add_instruction(pass_op{}, t);
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().transposed());
@@ -51,14 +52,14 @@ void after_literal_transpose()
     EXPECT(not p.get_shape().transposed());
 }
 
-void after_literal_broadcast()
+TEST_CASE(after_literal_broadcast)
 {
-    migraph::program p;
+    migraphx::program p;
     auto l1 = p.add_literal(get_2x2());
     auto l2 = p.add_literal(get_2());
     EXPECT(p.get_shape().standard());
     EXPECT(not p.get_shape().broadcasted());
-    auto b = p.add_instruction(migraph::op::broadcast{0, l1->get_shape()}, l2);
+    auto b = p.add_instruction(migraphx::op::broadcast{0, l1->get_shape()}, l2);
     p.add_instruction(pass_op{}, b);
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().broadcasted());
@@ -67,13 +68,13 @@ void after_literal_broadcast()
     EXPECT(not p.get_shape().broadcasted());
 }
 
-void after_param_transpose()
+TEST_CASE(after_param_transpose)
 {
-    migraph::program p;
-    auto l = p.add_parameter("2x2", {migraph::shape::float_type, {2, 2}});
+    migraphx::program p;
+    auto l = p.add_parameter("2x2", {migraphx::shape::float_type, {2, 2}});
     EXPECT(p.get_shape().standard());
     EXPECT(not p.get_shape().transposed());
-    auto t = p.add_instruction(migraph::op::transpose{{1, 0}}, l);
+    auto t = p.add_instruction(migraphx::op::transpose{{1, 0}}, l);
     p.add_instruction(pass_op{}, t);
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().transposed());
@@ -82,14 +83,14 @@ void after_param_transpose()
     EXPECT(not p.get_shape().transposed());
 }
 
-void after_param_broadcast()
+TEST_CASE(after_param_broadcast)
 {
-    migraph::program p;
-    auto l1 = p.add_parameter("2x2", {migraph::shape::float_type, {2, 2}});
-    auto l2 = p.add_parameter("2", {migraph::shape::float_type, {2}});
+    migraphx::program p;
+    auto l1 = p.add_parameter("2x2", {migraphx::shape::float_type, {2, 2}});
+    auto l2 = p.add_parameter("2", {migraphx::shape::float_type, {2}});
     EXPECT(p.get_shape().standard());
     EXPECT(not p.get_shape().broadcasted());
-    auto b = p.add_instruction(migraph::op::broadcast{0, l1->get_shape()}, l2);
+    auto b = p.add_instruction(migraphx::op::broadcast{0, l1->get_shape()}, l2);
     p.add_instruction(pass_op{}, b);
     EXPECT(not p.get_shape().standard());
     EXPECT(p.get_shape().broadcasted());
@@ -98,12 +99,4 @@ void after_param_broadcast()
     EXPECT(not p.get_shape().broadcasted());
 }
 
-int main()
-{
-    // literal_broadcast();
-    literal_transpose();
-    after_literal_transpose();
-    after_literal_broadcast();
-    after_param_transpose();
-    after_param_broadcast();
-}
+int main(int argc, const char* argv[]) { test::run(argc, argv); }

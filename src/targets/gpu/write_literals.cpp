@@ -1,11 +1,11 @@
-#include <migraph/gpu/write_literals.hpp>
-#include <migraph/iterator_for.hpp>
-#include <migraph/gpu/hip.hpp>
-#include <migraph/instruction.hpp>
-#include <migraph/env.hpp>
+#include <migraphx/gpu/write_literals.hpp>
+#include <migraphx/iterator_for.hpp>
+#include <migraphx/gpu/hip.hpp>
+#include <migraphx/instruction.hpp>
+#include <migraphx/env.hpp>
 
-namespace migraph {
-
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 namespace gpu {
 
 MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_COPY_LITERALS)
@@ -51,5 +51,7 @@ void write_literals::apply(program& p) const
         }
     }
 }
+
 } // namespace gpu
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

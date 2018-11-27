@@ -1,10 +1,11 @@
-#include <migraph/simplify_algebra.hpp>
-#include <migraph/program.hpp>
-#include <migraph/operators.hpp>
-#include <migraph/matcher.hpp>
-#include <migraph/literal.hpp>
+#include <migraphx/simplify_algebra.hpp>
+#include <migraphx/program.hpp>
+#include <migraphx/operators.hpp>
+#include <migraphx/matcher.hpp>
+#include <migraphx/literal.hpp>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 
 struct find_add_lit_broadcast
 {
@@ -60,4 +61,5 @@ struct find_add_lit_broadcast
 
 void simplify_algebra::apply(program& p) const { match::find_matches(p, find_add_lit_broadcast{}); }
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

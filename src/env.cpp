@@ -1,8 +1,9 @@
-#include <migraph/env.hpp>
-#include <migraph/ranges.hpp>
+#include <migraphx/env.hpp>
+#include <migraphx/ranges.hpp>
 #include <cstdlib>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 
 bool enabled(const char* name)
 {
@@ -29,4 +30,5 @@ std::vector<std::string> env(const char* name)
         return {{p}};
 }
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

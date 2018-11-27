@@ -9,14 +9,15 @@
 #include <utility>
 #include <vector>
 
-#include <migraph/fallthrough.hpp>
-#include <migraph/program.hpp>
-#include <migraph/operators.hpp>
-#include <migraph/ranges.hpp>
-#include <migraph/instruction.hpp>
+#include <migraphx/fallthrough.hpp>
+#include <migraphx/program.hpp>
+#include <migraphx/operators.hpp>
+#include <migraphx/ranges.hpp>
+#include <migraphx/instruction.hpp>
+#include <migraphx/config.hpp>
 
-namespace migraph {
-
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 struct unknown
 {
     std::string op;
@@ -48,13 +49,17 @@ struct onnx_parser
 
     onnx_parser()
     {
-        add_generic_op("Add", op::add{});
-        add_generic_op("Div", op::div{});
         add_generic_op("MatMul", op::dot{});
-        add_generic_op("Mul", op::mul{});
         add_generic_op("Relu", op::relu{});
-        add_generic_op("Sub", op::sub{});
-        add_generic_op("Sum", op::add{});
+        // disable dropout for inference
+        add_generic_op("Dropout", op::identity{});
+        add_generic_op("Identity", op::identity{});
+
+        add_broadcastable_binary_op("Add", op::add{});
+        add_broadcastable_binary_op("Div", op::div{});
+        add_broadcastable_binary_op("Mul", op::mul{});
+        add_broadcastable_binary_op("Sub", op::sub{});
+        add_broadcastable_binary_op("Sum", op::add{});
 
         add_mem_op("ImageScaler", &onnx_parser::parse_imagescaler);
         add_mem_op("LeakyRelu", &onnx_parser::parse_leaky_relu);
@@ -73,6 +78,7 @@ struct onnx_parser
         add_mem_op("Unsqueeze", &onnx_parser::parse_unsqueeze);
         add_mem_op("Slice", &onnx_parser::parse_slice);
         add_mem_op("Concat", &onnx_parser::parse_concat);
+        add_mem_op("Transpose", &onnx_parser::parse_transpose);
     }
 
     template <class F>
@@ -88,12 +94,13 @@ struct onnx_parser
             return std::mem_fn(f)(*this, name, std::forward<decltype(xs)>(xs)...);
         });
     }
-
     template <class T>
-    void add_generic_op(std::string name, T x)
+    void add_broadcastable_binary_op(std::string name, T x)
     {
         ops.emplace(name, [this, x](attribute_map attributes, std::vector<instruction_ref> args) {
-            if(args.size() == 2 and contains(attributes, "broadcast"))
+            if(args.size() != 2)
+                MIGRAPH_THROW("binary operators should have 2 operands");
+            if(contains(attributes, "broadcast"))
             {
                 uint64_t broadcasted = parse_value(attributes.at("broadcast")).at<uint64_t>();
                 if(broadcasted != 0)
@@ -105,7 +112,55 @@ struct onnx_parser
                         prog.add_instruction(op::broadcast{axis, args[0]->get_shape()}, args[1]);
                     return prog.add_instruction(x, args[0], l);
                 }
+                return prog.add_instruction(x, args);
             }
+            else if(args[0]->get_shape() != args[1]->get_shape())
+            {
+                // Example:
+                // s0 = (3,2,4,5) and s1 = (2,1,1)
+                //
+                // In this case we need to broadcast (:,1,1) portion of
+                // s1 plus broadcast the 1st dimension of s1
+                // giving output_lens = (3,2,4,5)
+                //
+                // Another example:
+                // s0 = (3,2,1,5) and s1 = (2,7,5)
+                // In this case we need to broadcast the (:,:,1:,:) axis
+                // of s0 plus the 1st dimension of s1 giving
+                // output_lens = (3,2,7,5)
+                //
+                // Get lengths for both arguments
+                const std::vector<std::size_t>* s0 = &args[0]->get_shape().lens();
+                const std::vector<std::size_t>* s1 = &args[1]->get_shape().lens();
+
+                // Make sure s0 is the smaller size
+                if(s0->size() > s1->size())
+                    std::swap(s0, s1);
+
+                // Copy the larger vector to output_lens
+                std::vector<std::size_t> output_lens(s1->size());
+                auto offset = s1->size() - s0->size();
+                std::transform(s0->begin(),
+                               s0->end(),
+                               s1->begin() + offset,
+                               output_lens.begin() + offset,
+                               [](auto a, auto b) { return std::max(a, b); });
+
+                auto l0 = prog.add_instruction(op::multibroadcast{output_lens}, args[0]);
+                auto l1 = prog.add_instruction(op::multibroadcast{output_lens}, args[1]);
+                return prog.add_instruction(x, l0, l1);
+            }
+            else
+            {
+                return prog.add_instruction(x, args);
+            }
+        });
+    }
+
+    template <class T>
+    void add_generic_op(std::string name, T x)
+    {
+        ops.emplace(name, [this, x](attribute_map, std::vector<instruction_ref> args) {
             return prog.add_instruction(x, args);
         });
     }
@@ -352,12 +407,24 @@ struct onnx_parser
 
         auto scale_val = prog.add_literal(scale);
         auto bias_vals = prog.add_literal(
-            migraph::literal{migraph::shape{migraph::shape::float_type, {bias.size()}}, bias});
+            migraphx::literal{migraphx::shape{migraphx::shape::float_type, {bias.size()}}, bias});
 
-        auto scale_tensor = prog.add_instruction(migraph::op::scalar{input_shape}, scale_val);
-        auto img_scaled   = prog.add_instruction(migraph::op::mul{}, args.front(), scale_tensor);
-        auto bias_bcast   = prog.add_instruction(migraph::op::broadcast{1, input_shape}, bias_vals);
-        return prog.add_instruction(migraph::op::add{}, img_scaled, bias_bcast);
+        auto scale_tensor = prog.add_instruction(migraphx::op::scalar{input_shape}, scale_val);
+        auto img_scaled   = prog.add_instruction(migraphx::op::mul{}, args.front(), scale_tensor);
+        auto bias_bcast = prog.add_instruction(migraphx::op::broadcast{1, input_shape}, bias_vals);
+        return prog.add_instruction(migraphx::op::add{}, img_scaled, bias_bcast);
+    }
+
+    instruction_ref
+    parse_transpose(const std::string&, attribute_map attributes, std::vector<instruction_ref> args)
+    {
+        std::vector<int64_t> perm{};
+        if(contains(attributes, "perm"))
+        {
+            auto&& perm_vals = attributes["perm"].ints();
+            perm             = std::vector<int64_t>(perm_vals.begin(), perm_vals.end());
+        }
+        return prog.add_instruction(migraphx::op::transpose{perm}, args.front());
     }
 
     void parse_from(std::istream& is)
@@ -453,7 +520,7 @@ struct onnx_parser
     {
         if(node.name().empty())
         {
-            std::string generated = "migraph_unnamed_node";
+            std::string generated = "migraphx_unnamed_node";
             return std::accumulate(node.output().begin(),
                                    node.output().end(),
                                    generated,
@@ -520,7 +587,7 @@ struct onnx_parser
             case onnx::TensorProto::INT64: return literal{{shape::int64_type, dims}, s.data()};
             case onnx::TensorProto::STRING: throw std::runtime_error("");
             case onnx::TensorProto::BOOL: return literal{{shape::int32_type, dims}, s.data()};
-            case onnx::TensorProto::FLOAT16: throw std::runtime_error("");
+            case onnx::TensorProto::FLOAT16: return literal{{shape::half_type, dims}, s.data()};
             case onnx::TensorProto::DOUBLE: return literal{{shape::double_type, dims}, s.data()};
             case onnx::TensorProto::UINT32: throw std::runtime_error("");
             case onnx::TensorProto::UINT64: throw std::runtime_error("");
@@ -548,7 +615,8 @@ struct onnx_parser
         case onnx::TensorProto::STRING: throw std::runtime_error("");
         case onnx::TensorProto::BOOL:
             return literal{{shape::int32_type, dims}, t.int32_data().begin(), t.int32_data().end()};
-        case onnx::TensorProto::FLOAT16: throw std::runtime_error("");
+        case onnx::TensorProto::FLOAT16:
+            return literal{{shape::half_type, dims}, t.float_data().begin(), t.float_data().end()};
         case onnx::TensorProto::DOUBLE:
             return literal{
                 {shape::double_type, dims}, t.double_data().begin(), t.double_data().end()};
@@ -579,8 +647,7 @@ struct onnx_parser
             break; // throw std::runtime_error("Unsupported type STRING");
         case onnx::TensorProto::BOOL:
             break; // throw std::runtime_error("Unsupported type BOOL");
-        case onnx::TensorProto::FLOAT16:
-            break; // throw std::runtime_error("Unsupported type FLOAT16");
+        case onnx::TensorProto::FLOAT16: shape_type = shape::half_type; break;
         case onnx::TensorProto::DOUBLE: shape_type = shape::double_type; break;
         case onnx::TensorProto::UINT32: shape_type = shape::uint32_type; break;
         case onnx::TensorProto::UINT64: shape_type = shape::uint64_type; break;
@@ -591,15 +658,17 @@ struct onnx_parser
         }
         std::vector<std::size_t> dims;
         auto&& tensor_dims = t.tensor_type().shape().dim();
-        std::transform(
-            tensor_dims.begin(), tensor_dims.end(), std::back_inserter(dims), [](auto&& d) {
-                if(not d.has_dim_value())
-                {
-                    long default_batch_size = 1; // FIXME
-                    return default_batch_size;
-                }
-                return d.dim_value();
-            });
+        std::transform(tensor_dims.begin(),
+                       tensor_dims.end(),
+                       std::back_inserter(dims),
+                       [](auto&& d) -> std::size_t {
+                           if(not d.has_dim_value())
+                           {
+                               long default_batch_size = 1; // FIXME
+                               return default_batch_size;
+                           }
+                           return d.dim_value();
+                       });
         return {shape_type, dims};
     }
 };
@@ -625,4 +694,5 @@ program parse_onnx(const std::string& name)
     return std::move(parser.prog);
 }
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

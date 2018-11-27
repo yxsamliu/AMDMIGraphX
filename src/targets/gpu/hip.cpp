@@ -1,12 +1,13 @@
 
-#include <migraph/gpu/hip.hpp>
+#include <migraphx/gpu/hip.hpp>
 
-#include <migraph/manage_ptr.hpp>
+#include <migraphx/manage_ptr.hpp>
 #include <miopen/miopen.h>
 
 #include <vector>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 namespace gpu {
 
 using hip_ptr = MIGRAPH_MANAGE_PTR(void, hipFree);
@@ -107,5 +108,7 @@ void copy_to_gpu(argument src, argument dst)
     if(status != hipSuccess)
         MIGRAPH_THROW("Copy to gpu failed: " + hip_error(status));
 }
+
 } // namespace gpu
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

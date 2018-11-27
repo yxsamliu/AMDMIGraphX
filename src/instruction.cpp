@@ -1,8 +1,9 @@
-#include <migraph/instruction.hpp>
-#include <migraph/builtin.hpp>
-#include <migraph/erase.hpp>
+#include <migraphx/instruction.hpp>
+#include <migraphx/builtin.hpp>
+#include <migraphx/erase.hpp>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 
 instruction::instruction(operation o, shape r, std::vector<instruction_ref> args)
     : op(std::move(o)), result(std::move(r)), arguments(std::move(args))
@@ -69,7 +70,7 @@ bool instruction::valid() const
         {
             computed = compute_shape(op, arguments);
         }
-        catch(migraph::exception&)
+        catch(migraphx::exception&)
         {
             return false;
         }
@@ -182,4 +183,5 @@ shape compute_shape(const operation& op, const std::vector<instruction_ref>& arg
     return op.compute_shape(compute_shapes(args));
 }
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx

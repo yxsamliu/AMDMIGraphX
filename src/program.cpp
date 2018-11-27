@@ -1,16 +1,17 @@
-#include <migraph/program.hpp>
-#include <migraph/stringutils.hpp>
-#include <migraph/instruction.hpp>
-#include <migraph/env.hpp>
-#include <migraph/ranges.hpp>
-#include <migraph/time.hpp>
-#include <migraph/iterator_for.hpp>
+#include <migraphx/program.hpp>
+#include <migraphx/stringutils.hpp>
+#include <migraphx/instruction.hpp>
+#include <migraphx/env.hpp>
+#include <migraphx/ranges.hpp>
+#include <migraphx/time.hpp>
+#include <migraphx/iterator_for.hpp>
 #include <iostream>
 #include <sstream>
 #include <algorithm>
 #include <utility>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 
 MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_TRACE_COMPILE)
 MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_TRACE_EVAL)
@@ -365,7 +366,8 @@ argument program::eval(std::unordered_map<std::string, argument> params) const
         auto& ctx = this->impl->ctx;
         return generic_eval(*this, this->impl->ctx, std::move(params), [&](auto& ins, auto f) {
             ctx.finish();
-            std::cout << "Run instruction: " << ins->name() << std::endl;
+            std::cout << "Run instruction: ";
+            this->debug_print(ins);
             return f();
         });
     }
@@ -498,4 +500,6 @@ std::ostream& operator<<(std::ostream& os, const program& p)
     print_program(os, p, [](auto&&...) {});
     return os;
 }
-} // namespace migraph
+
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx
