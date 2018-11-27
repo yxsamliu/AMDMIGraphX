@@ -225,7 +225,7 @@ struct allocation_color
                 }
             }
         }
-        // Reduce the number of colors 
+        // Reduce the number of colors
         for(auto parent : conflict_queue)
         {
             auto children = conflict_table.at(parent);
@@ -254,10 +254,11 @@ struct allocation_color
                 return ac.max_bytes(x) < ac.max_bytes(y);
             });
 
-            for(auto color:next_colors)
+            for(auto color : next_colors)
             {
                 auto bytes = ac.max_bytes(color);
-                if(bytes >= parent->get_shape().bytes() or ac.instructions(parent_color) == 1 or ac.instructions(color) == 1) 
+                if(bytes >= parent->get_shape().bytes() or ac.instructions(parent_color) == 1 or
+                   ac.instructions(color) == 1)
                 {
                     ac.add_color(parent, color);
                     break;
