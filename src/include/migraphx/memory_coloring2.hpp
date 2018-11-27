@@ -1,10 +1,11 @@
-#ifndef MIGRAPH_GUARD_RTGLIB_MEMORY_COLORING2_HPP
-#define MIGRAPH_GUARD_RTGLIB_MEMORY_COLORING2_HPP
+#ifndef MIGRAPHX_GUARD_RTGLIB_MEMORY_COLORING2_HPP
+#define MIGRAPHX_GUARD_RTGLIB_MEMORY_COLORING2_HPP
 
 #include <string>
-#include <migraph/instruction_ref.hpp>
+#include <migraphx/instruction_ref.hpp>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 struct program;
 
 struct memory_coloring2
@@ -14,6 +15,7 @@ struct memory_coloring2
     void apply(program& p) const;
 };
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx
 
 #endif

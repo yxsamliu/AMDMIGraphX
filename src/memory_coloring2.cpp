@@ -1,17 +1,18 @@
-#include <migraph/memory_coloring2.hpp>
-#include <migraph/program.hpp>
-#include <migraph/operators.hpp>
-#include <migraph/instruction.hpp>
-#include <migraph/iterator_for.hpp>
-#include <migraph/functional.hpp>
-#include <migraph/ranges.hpp>
-#include <migraph/stringutils.hpp>
+#include <migraphx/memory_coloring2.hpp>
+#include <migraphx/program.hpp>
+#include <migraphx/operators.hpp>
+#include <migraphx/instruction.hpp>
+#include <migraphx/iterator_for.hpp>
+#include <migraphx/functional.hpp>
+#include <migraphx/ranges.hpp>
+#include <migraphx/stringutils.hpp>
 #include <unordered_set>
 #include <unordered_map>
 #include <map>
 #include <set>
 
-namespace migraph {
+namespace migraphx {
+inline namespace MIGRAPH_INLINE_NS {
 
 using instruction_set     = std::unordered_set<instruction_ref>;
 using instruction_set_map = std::unordered_map<instruction_ref, instruction_set>;
@@ -252,4 +253,5 @@ void memory_coloring2::apply(program& p) const
     }
 }
 
-} // namespace migraph
+} // namespace MIGRAPH_INLINE_NS
+} // namespace migraphx
