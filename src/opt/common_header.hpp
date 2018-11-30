@@ -16,7 +16,7 @@
 namespace migraphx {
 inline namespace MIGRAPH_INLINE_NS {
 
-//#define MIGRAPH_DEBUG_OPT
+#define MIGRAPH_DEBUG_OPT
 
 #ifdef MIGRAPH_DEBUG_OPT
 #define MIGRAPH_DEBUG(s) s

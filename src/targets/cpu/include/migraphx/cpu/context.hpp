@@ -9,7 +9,12 @@ namespace cpu {
 
 struct context
 {
-    void finish() const {}
+    void finish() {}
+    void set_stream(int ndx) {ndx;}
+    void add_stream() {}
+    int  create_event() { return -1; }
+    void record_event(int event, int stream) {event; stream;}
+    void wait_event(int stream, int event) { stream; event;}
 };
 
 } // namespace cpu

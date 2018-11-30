@@ -17,6 +17,8 @@
 #include <migraphx/fwd_conv_batchnorm_rewrite.hpp>
 #include <migraphx/eliminate_concat.hpp>
 #include <migraphx/gpu/concat_gpu_opt.hpp>
+#include <migraphx/pre_scheduling.hpp>
+#include <migraph/gpu/machine_model.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPH_INLINE_NS {
@@ -25,6 +27,8 @@ namespace gpu {
 std::vector<pass> target::get_passes(migraphx::context& gctx) const
 {
     auto& ctx = any_cast<context>(gctx);
+    std::function<std::pair<int,int>(std::string&)> weight_func = op_info();
+    int num_of_streams = stream_info().num_of_streams();
     // clang-format off
     return
     {
@@ -40,12 +44,13 @@ std::vector<pass> target::get_passes(migraphx::context& gctx) const
         auto_contiguous{},
         simplify_reshapes{},
         dead_code_elimination{},
+        pre_scheduling{weight_func, num_of_streams},                        
         lowering{ctx},
         eliminate_concat{concat_gpu_optimization{}},
         dead_code_elimination{},
         eliminate_contiguous{},
         dead_code_elimination{},
-        fuse_ops{&ctx},
+            //            fuse_ops{&ctx},
         dead_code_elimination{},
         write_literals{&ctx},
         memory_coloring{"hip::allocate"},
