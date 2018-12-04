@@ -122,6 +122,18 @@ struct context
         return (*this).private_detail_te_get_handle().wait_event(stream, event);      
     }
 
+    void wait_for_completion(int event)
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().wait_for_completion(event);        
+    }
+
+    void destroy()
+    {
+        assert((*this).private_detail_te_handle_mem_var);
+        return (*this).private_detail_te_get_handle().destroy();        
+    }
+
     private:
     struct private_detail_te_handle_base_type
     {
@@ -134,6 +146,8 @@ struct context
         virtual int create_event() = 0;
         virtual void record_event(int, int) = 0;
         virtual void wait_event(int, int) = 0;
+        virtual void wait_for_completion(int) = 0;
+        virtual void destroy()=0;
     };
 
     template <typename PrivateDetailTypeErasedT>
@@ -169,6 +183,8 @@ struct context
         int create_event() override { return private_detail_te_value.create_event(); }
         void record_event(int event, int stream) override { return private_detail_te_value.record_event(event, stream); }
         void wait_event(int stream, int event) override { return private_detail_te_value.wait_event(stream, event); }
+        void wait_for_completion(int event) override { return private_detail_te_value.wait_for_completion(event); }
+        void destroy() override { return private_detail_te_value.destroy(); }
 
         PrivateDetailTypeErasedT private_detail_te_value;
     };

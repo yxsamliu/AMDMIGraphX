@@ -283,6 +283,26 @@ instruction_ref program::validate() const
                         [&](const instruction& i) { return !i.valid(impl->instructions.begin()); });
 }
 
+void program::finish()
+{
+    this->impl->ctx.finish();
+}
+
+void program::wait_for_completion()
+{
+    instruction_ref last_ins = std::prev(this->end());
+    int event = last_ins->get_event();
+    if (event >= 0)
+        this->impl->ctx.wait_for_completion(event);
+    else
+        finish();
+}
+
+void program::destroy()
+{
+    this->impl->ctx.destroy();
+}
+           
 void program::compile(const target& t, tracer trace)
 {
     assert(this->validate() == impl->instructions.end());
@@ -327,10 +347,14 @@ argument generic_eval(const program& p,
     results.reserve(p.size() * 2);
     std::vector<argument> values;
     values.reserve(16);
+    instruction_ref last_ins = std::prev(p.end());
+    int num_of_stream = 0;
+    
     for(auto ins : iterator_for(p))
     {
         int stream = ins->get_stream();
         ctx.set_stream(stream);
+        num_of_stream = std::max(num_of_stream, stream + 1);
         if(ins->name() == "@literal")
         {
             results.emplace(ins, trace(ins, [&] { return ins->get_literal().get_argument(); }));
@@ -371,8 +395,8 @@ argument generic_eval(const program& p,
                 }
             }
 
-            int event = -1;
-            if (ins->has_mask(RECORD_EVENT))
+            int event = ins->get_event();
+            if ((event < 0) && (ins->has_mask(RECORD_EVENT) || ((ins == last_ins) && (stream >= 0))))
             {
                 event = ctx.create_event();
                 ins->set_event(event);
@@ -384,6 +408,16 @@ argument generic_eval(const program& p,
                 ctx.record_event(event, stream);
         }
         assert(results.find(ins) != results.end());
+    }
+
+    int event = last_ins->get_event();
+    if (event > 0) {
+        int stream = last_ins->get_stream();
+        for (int i = 0; i < num_of_stream; i++)
+        {
+            if (i != stream)
+                ctx.wait_event(i, event);
+        }
     }
     return results.at(std::prev(p.end()));
 }
@@ -403,7 +437,7 @@ argument program::eval(std::unordered_map<std::string, argument> params) const
     else
     {
         return generic_eval(
-            *this, this->impl->ctx, std::move(params), [](auto&, auto f) { return f(); });
+                            *this, this->impl->ctx, std::move(params), [](auto&, auto f) { return f(); });
     }
 }
 

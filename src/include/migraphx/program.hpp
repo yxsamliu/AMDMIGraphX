@@ -100,6 +100,9 @@ struct program
     void debug_print() const;
     void debug_print(instruction_ref ins) const;
     void debug_print(const std::vector<instruction_ref>& inss) const;
+    void finish();
+    void wait_for_completion();
+    void destroy();
 
     friend std::ostream& operator<<(std::ostream& os, const program& p);
     friend bool operator==(const program& x, const program& y);
