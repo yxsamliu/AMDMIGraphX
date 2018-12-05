@@ -145,9 +145,6 @@ struct hip_device
             int num_of_events = events.size();
             for (int i= 0; i < num_of_events; i++)
                 hipEventDestroy(events.at(i));
-            int num_of_streams = streams.size();
-            for (int i = 0; i < num_of_streams; i++)
-                hipStreamDestroy(streams.at(i).get());
         }
     }
 
