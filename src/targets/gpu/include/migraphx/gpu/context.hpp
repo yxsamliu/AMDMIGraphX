@@ -12,8 +12,6 @@ namespace migraphx {
 inline namespace MIGRAPH_INLINE_NS {
 namespace gpu {
 
-MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_DISABLE_NULL_STREAM)
-
 struct hip_device
 {
     hip_device() { add_stream(); }

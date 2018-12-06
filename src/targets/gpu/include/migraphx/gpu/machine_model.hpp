@@ -7,6 +7,8 @@
 namespace migraphx {
 namespace gpu {
 
+MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_DISABLE_NULL_STREAM)
+
 struct op_info
 {
     op_info()
@@ -45,7 +47,7 @@ struct stream_info
 {
     int num_of_streams()
     {
-        if (enabled(MIGRAPH_DISABLE_PRE_SCHEDULING{}))
+        if (!enabled(MIGRAPH_DISABLE_NULL_STREAM{}))
             return 0;
         else
             return 4;

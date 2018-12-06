@@ -409,7 +409,7 @@ argument generic_eval(const program& p,
         }
         assert(results.find(ins) != results.end());
     }
-
+#if 0
     int event = last_ins->get_event();
     if (event > 0) {
         int stream = last_ins->get_stream();
@@ -419,6 +419,7 @@ argument generic_eval(const program& p,
                 ctx.wait_event(i, event);
         }
     }
+#endif    
     return results.at(std::prev(p.end()));
 }
 

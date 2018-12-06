@@ -94,9 +94,7 @@ void pre_scheduling_impl::reorder()
     MIGRAPH_DEBUG(dump("---After weighted topology sort---"));
     MIGRAPH_DEBUG(dump(sorted_nodes));
 #endif
-#if 1
     schedule(sorted_nodes);
-#endif    
     splice(sorted_nodes);
 
 #ifdef MIGRAPH_DEBUG_OPT
@@ -133,15 +131,6 @@ void pre_scheduling_impl::record(stream_info& info, dag_node* node)
     int next_cycle = info.next_cycles[stream];
     node->sched_cycle = std::max(node->earliest_cycle, next_cycle);
     next_cycle = node->sched_cycle + node->weight;
-#if 0    
-    if (node->run_on_cpu) {
-        for (auto iter = 0; iter < num_of_streams; ++iter)
-        {
-            info.next_cycles[iter] = std::max(info.next_cycles[iter], next_cycle);
-        }
-    }
-#endif    
-    
     info.next_cycles[stream] = next_cycle;
     info.max_cycle = std::max(info.max_cycle, next_cycle);
     for (auto&& arg : node->ins->outputs())
@@ -191,7 +180,8 @@ void pre_scheduling_impl::schedule(std::list<dag_node*>& sorted_nodes)
 #ifdef MIGRAPH_DEBUG_OPT    
     MIGRAPH_DEBUG(dump("---After assigning stream---"));
     MIGRAPH_DEBUG(dump(sorted_nodes));
-#endif    
+#endif
+
     if (stream_used) {
         sorted_nodes.clear();
         while (!queue.empty())
