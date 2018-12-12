@@ -11,6 +11,8 @@ void memory_coloring_impl::run()
     if(num_of_lives != 0)
     {
         MIGRAPH_DEBUG(dump_intervals());
+        dom_info info(p_program);
+        info.run();
         // Coloring
         while(!alloc_queue.empty())
         {

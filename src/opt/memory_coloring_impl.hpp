@@ -1,6 +1,7 @@
 #ifndef MIGRAPH_GUARD_RTGLIB_MEMORY_COLORING_IMPL_HPP
 #define MIGRAPH_GUARD_RTGLIB_MEMORY_COLORING_IMPL_HPP
 #include "common_header.hpp"
+#include "dom_info.hpp"
 #include <migraphx/config.hpp>
 
 namespace migraphx {
@@ -130,6 +131,7 @@ struct memory_coloring_impl
             return (i1->offset > i2->offset);
         }
     };
+    
     program* p_program;
     std::unordered_map<const instruction*, interval_ptr> instr2_live;
     // universe of live intervals.
@@ -140,7 +142,6 @@ struct memory_coloring_impl
     std::unordered_map<int, std::set<int>> conflict_table;
     // Priority queue for coloring.
     std::priority_queue<interval_ptr, std::vector<interval_ptr>, ordering> alloc_queue;
-
     int num_of_lives;
     int max_value_number;
     long long required_bytes;
