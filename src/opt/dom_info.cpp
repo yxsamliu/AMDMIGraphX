@@ -29,11 +29,11 @@ bool dom_info::strictly_post_dominates(const instruction* ins1, const instructio
     return false;
 }
            
-bool dom_info::compute_dom(bool reversed)
+void dom_info::compute_dom(bool reversed)
 {
     std::size_t num_of_instrs = p_program->size();
     if (num_of_instrs == 0)
-        return false;
+        return;
     std::unordered_map<const instruction*, std::set<const instruction*>> instr2_doms;
     std::unordered_map<const instruction*, int> instr2_points;
     int cur_points = reversed ? num_of_instrs - 1 : 0;
@@ -100,7 +100,6 @@ bool dom_info::compute_dom(bool reversed)
     if (has_stream) {
         MIGRAPH_DEBUG(dump_doms(instr2_points, reversed));
     }
-    return has_stream;
 }
 
 #ifdef MIGRAPH_DEBUG_OPT

@@ -53,8 +53,8 @@ using interval_ptr = live_interval*;
 
 struct memory_coloring_impl
 {
-    memory_coloring_impl(program* p, std::string alloc_op, bool p_verify)
-        : p_program(p), allocation_op(std::move(alloc_op)), enable_verify(p_verify)
+    memory_coloring_impl(program* p, std::string alloc_op, bool p_verify, int num)
+        : p_program(p), allocation_op(std::move(alloc_op)), enable_verify(p_verify), num_of_streams(num)
     {
         instr2_live.clear();
         live_ranges.clear();
@@ -75,6 +75,8 @@ struct memory_coloring_impl
             conflict_table[val].insert(iter);
         }
     }
+    void propagate_splits(dom_info&);
+    void add_stream_conflicts(std::vector<const instruction *>&, std::vector<const instruction *>&);
     void build();
     void run();
     void rewrite();
@@ -106,6 +108,8 @@ struct memory_coloring_impl
     void dump(const std::string&);
     void dump_program();
     void dump_intervals();
+    void dump_splits(std::unordered_map<instruction_ref, std::set<const instruction *>>&);
+    void dump_concur_instrs(std::unordered_map<const instruction*, std::vector<std::vector<const instruction*>>>&);
 #endif
     struct ordering
     {
@@ -142,6 +146,7 @@ struct memory_coloring_impl
     std::unordered_map<int, std::set<int>> conflict_table;
     // Priority queue for coloring.
     std::priority_queue<interval_ptr, std::vector<interval_ptr>, ordering> alloc_queue;
+    std::unordered_map<const instruction*, int> instr2_points;
     int num_of_lives;
     int max_value_number;
     long long required_bytes;
@@ -153,6 +158,7 @@ struct memory_coloring_impl
     bool unify_literals;
     std::string allocation_op{};
     bool enable_verify;
+    int num_of_streams;
 };
 
 } // namespace MIGRAPH_INLINE_NS

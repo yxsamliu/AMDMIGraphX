@@ -37,12 +37,7 @@ struct dom_info
         instr2_idom.clear();
         instr2_ipdom.clear();
     }
-    bool compute_dom(bool);
-    void run()
-    {
-        if (compute_dom(false))
-            compute_dom(true);
-    }
+    void compute_dom(bool);
 
 #ifdef MIGRAPH_DEBUG_OPT
     void dump_doms(std::unordered_map<const instruction*, int>&, bool);

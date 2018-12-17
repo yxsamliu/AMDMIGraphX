@@ -27,6 +27,16 @@ set_union(const Set& lhs, const Set& rhs) {
     uset.insert(rhs.begin(), rhs.end());
     return std::move(uset);
 }
+
+template <typename Set, typename Key = typename Set::value_type>
+static inline Set
+set_difference(const Set& lhs, const Set& rhs) {
+    Set dset{lhs};
+    for (auto& iter : rhs) {
+        dset.erase(iter);
+    }
+    return std::move(dset);
+}
     
 } // namespace set_op
 } // namespace migraphx
