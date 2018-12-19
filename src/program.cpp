@@ -288,16 +288,6 @@ void program::finish()
     this->impl->ctx.finish();
 }
 
-void program::wait_for_completion()
-{
-    instruction_ref last_ins = std::prev(this->end());
-    int event = last_ins->get_event();
-    if (event >= 0)
-        this->impl->ctx.wait_for_completion(event);
-    else
-        finish();
-}
-
 void program::destroy()
 {
     this->impl->ctx.destroy();
@@ -396,7 +386,7 @@ argument generic_eval(const program& p,
             }
 
             int event = ins->get_event();
-            if ((event < 0) && (ins->has_mask(RECORD_EVENT) || ((ins == last_ins) && (stream >= 0))))
+            if ((event < 0) && ins->has_mask(RECORD_EVENT))
             {
                 event = ctx.create_event();
                 ins->set_event(event);
@@ -409,17 +399,6 @@ argument generic_eval(const program& p,
         }
         assert(results.find(ins) != results.end());
     }
-#if 0
-    int event = last_ins->get_event();
-    if (event > 0) {
-        int stream = last_ins->get_stream();
-        for (int i = 0; i < num_of_stream; i++)
-        {
-            if (i != stream)
-                ctx.wait_event(i, event);
-        }
-    }
-#endif    
     return results.at(std::prev(p.end()));
 }
 

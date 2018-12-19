@@ -50,7 +50,7 @@ std::vector<pass> target::get_passes(migraphx::context& gctx) const
         dead_code_elimination{},
         eliminate_contiguous{},
         dead_code_elimination{},
-            //            fuse_ops{&ctx},
+        fuse_ops{&ctx},
         dead_code_elimination{},
         write_literals{&ctx},
         memory_coloring{"hip::allocate", num_of_streams},

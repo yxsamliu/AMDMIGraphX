@@ -49,6 +49,8 @@ struct instruction
     void set_stream(int);
     int get_event() const;
     void set_event(int);
+    int get_mask() const;
+    void set_mask(int);
     void add_mask(instruction_mask m)
     {
         if ((mask & ( 1 << m)) == 0)

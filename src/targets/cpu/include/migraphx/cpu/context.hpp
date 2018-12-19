@@ -15,7 +15,6 @@ struct context
     int  create_event() { return -1; }
     void record_event(int, int) {}
     void wait_event(int, int) {}
-    void wait_for_completion(int) {}
     void destroy(){}
 };
 

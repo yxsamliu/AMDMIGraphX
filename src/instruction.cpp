@@ -90,7 +90,9 @@ const literal& instruction::get_literal() const
 int instruction::get_stream() const { return stream; }
 void instruction::set_stream(int s)  { stream = s; }
 int instruction::get_event() const { return event; }
-void instruction::set_event(int e)  { event = e; }               
+void instruction::set_event(int e)  { event = e; }
+int instruction::get_mask() const { return mask; }
+void instruction::set_mask(int m)  { mask = m; }           
 
 const operation& instruction::get_operator() const { return op; }
 

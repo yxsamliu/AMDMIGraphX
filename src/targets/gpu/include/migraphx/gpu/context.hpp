@@ -116,23 +116,13 @@ struct hip_device
         hipStreamWaitEvent(streams.at(stream).get(), events.at(event), 0);
     }
     
-    void wait_for_completion(int event)
-    {
-        assert(event >= 0);
-        // hipEventSynchronize(events.at(last_event)) hangs.
-        while (!(hipEventQuery(events.at(event)) == hipSuccess));
-    }
     void stream_sync()
     {
         if(enabled(MIGRAPH_DISABLE_NULL_STREAM{})) {
             int num_of_streams = streams.size();
             if (num_of_streams > 0) {
-#if 0             
                 for (int i = 0; i < num_of_streams; i++)
                     hipStreamSynchronize(streams.at(i).get());
-#else
-                hipStreamSynchronize(streams.at(0).get());
-#endif            
             }
         }
     }
@@ -168,7 +158,6 @@ struct context
     int create_event() { return get_current_device().create_event(); }
     void record_event(int event, int stream) { get_current_device().record_event(event, stream); }
     void wait_event(int stream, int event) { get_current_device().wait_event(stream, event); }
-    void wait_for_completion(int event) { get_current_device().wait_for_completion(event); }
 
     std::vector<argument> literals{};
     void finish()

@@ -112,11 +112,11 @@ void dom_info::dump_doms(std::unordered_map<const instruction*, int>& instr2_poi
         const instruction* p_ins = &(*ins);
         if (!post_dom && (instr2_idom.find(p_ins) != instr2_idom.end())) {
             const instruction* idom = instr2_idom[p_ins];
-            std::cout << "@" << instr2_points[p_ins] << " imm dom: " << "@" << instr2_points[idom] << std::endl;
+            std::cout << "@" << instr2_points[p_ins] << " imm dominator: " << "@" << instr2_points[idom] << std::endl;
         }
         if (post_dom && (instr2_ipdom.find(p_ins) != instr2_ipdom.end())) {
             const instruction* ipdom = instr2_ipdom[p_ins];
-            std::cout << "@" << instr2_points[p_ins] << " imm post dom: " << "@" << instr2_points[ipdom] << std::endl;
+            std::cout << "@" << instr2_points[p_ins] << " imm post domimator: " << "@" << instr2_points[ipdom] << std::endl;
 
         }
     }
