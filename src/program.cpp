@@ -337,7 +337,6 @@ argument generic_eval(const program& p,
     results.reserve(p.size() * 2);
     std::vector<argument> values;
     values.reserve(16);
-    instruction_ref last_ins = std::prev(p.end());
     int num_of_stream = 0;
     
     for(auto ins : iterator_for(p))
