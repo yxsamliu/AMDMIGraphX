@@ -132,12 +132,16 @@ MIGRAPHX_PRED_MATCHER(fusable_conv, instruction_ref ins)
 {
     if(ins->name() != "gpu::convolution")
         return false;
-    if(ins->get_shape().type() != shape::float_type)
-        return false;
     auto wei = ins->inputs().at(1)->get_shape();
     assert(wei.lens().size() == 4);
     auto conv = any_cast<miopen_convolution>(ins->get_operator());
     if(conv.op.group > 1)
+        return false;
+    // Skip fp16 if 1x1
+    if(ins->get_shape().type() == shape::half_type and wei.lens()[2] == 1 and wei.lens()[3] == 1)
+        return false;
+    // Skip if not fp32 or fp16
+    if(ins->get_shape().type() != shape::float_type and ins->get_shape().type() != shape::half_type)
         return false;
     if(wei.lens()[1] > 512 and conv.algo != miopenConvolutionFwdAlgoWinograd)
         return false;
