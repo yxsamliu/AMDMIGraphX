@@ -112,7 +112,7 @@ auto reverse(Range& r)
     return range(std::make_reverse_iterator(r.end()), std::make_reverse_iterator(r.begin()));
 }
 
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
 
 #endif
