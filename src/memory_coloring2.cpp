@@ -12,7 +12,7 @@
 #include <set>
 
 namespace migraphx {
-inline namespace MIGRAPH_INLINE_NS {
+inline namespace MIGRAPHX_INLINE_NS {
 
 using instruction_set     = std::unordered_set<instruction_ref>;
 using instruction_set_map = std::unordered_map<instruction_ref, instruction_set>;
@@ -316,5 +316,5 @@ void memory_coloring2::apply(program& p) const
     }
 }
 
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
