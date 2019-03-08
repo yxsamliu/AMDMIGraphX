@@ -35,8 +35,7 @@ struct allocate
 
 migraphx::instruction_ref add_alloc(migraphx::program& p, const migraphx::shape& s)
 {
-    auto a0 = p.add_outline(s);
-    return p.add_instruction(allocate{}, a0);
+    return p.add_instruction(allocate{s});
 }
 
 bool no_allocate(const migraphx::program& p)

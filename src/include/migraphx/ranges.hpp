@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <initializer_list>
+#include <iterator>
 #include <migraphx/rank.hpp>
 #include <migraphx/config.hpp>
 

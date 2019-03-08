@@ -2,6 +2,7 @@
 #define MIGRAPHX_GUARD_RTGLIB_MEMORY_COLORING2_HPP
 
 #include <string>
+#include <migraphx/config.hpp>
 #include <migraphx/instruction_ref.hpp>
 
 namespace migraphx {

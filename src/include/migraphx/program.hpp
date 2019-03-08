@@ -3,13 +3,13 @@
 
 #include <list>
 #include <unordered_map>
+#include <migraphx/config.hpp>
 #include <migraphx/operation.hpp>
 #include <migraphx/literal.hpp>
 #include <migraphx/builtin.hpp>
 #include <migraphx/instruction_ref.hpp>
 #include <migraphx/target.hpp>
 #include <migraphx/tracer.hpp>
-#include <migraphx/config.hpp>
 #include <algorithm>
 #include <iostream>
 
