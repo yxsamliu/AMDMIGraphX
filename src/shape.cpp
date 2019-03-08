@@ -7,7 +7,7 @@
 #include <iostream>
 
 namespace migraphx {
-inline namespace MIGRAPH_INLINE_NS {
+inline namespace MIGRAPHX_INLINE_NS {
 
 struct shape_impl
 {
@@ -19,7 +19,7 @@ struct shape_impl
 
     shape_impl() : m_type(shape::float_type), m_standard(false) {}
 
-    shape_impl(shape::type_t t) : m_type(t), m_lens({1}), m_strides({1}), m_standard(true) {}
+    shape_impl(shape::type_t t) : m_type(t), m_lens({1}), m_strides({0}), m_standard(true) {}
     shape_impl(shape::type_t t, std::vector<std::size_t> l)
         : m_type(t), m_lens(std::move(l)), m_standard(true)
     {
@@ -169,12 +169,12 @@ std::string shape::type_string() const
 {
     switch(this->type())
     {
-#define MIGRAPH_SHAPE_TYPE_STRING_CASE(x, t) \
+#define MIGRAPHX_SHAPE_GENERATE_TYPE_STRING_CASE(x, t) \
     case x: return #x;
-        MIGRAPH_SHAPE_VISIT_TYPES(MIGRAPH_SHAPE_TYPE_STRING_CASE)
-#undef MIGRAPH_SHAPE_TYPE_STRING_CASE
+        MIGRAPHX_SHAPE_VISIT_TYPES(MIGRAPHX_SHAPE_GENERATE_TYPE_STRING_CASE)
+#undef MIGRAPHX_SHAPE_GENERATE_TYPE_STRING_CASE
     }
-    MIGRAPH_THROW("Invalid type");
+    MIGRAPHX_THROW("Invalid type");
 }
 
 bool operator==(const shape& x, const shape& y)
@@ -191,5 +191,5 @@ std::ostream& operator<<(std::ostream& os, const shape& x)
     return os;
 }
 
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx

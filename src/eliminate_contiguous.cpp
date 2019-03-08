@@ -8,7 +8,7 @@
 #include <utility>
 
 namespace migraphx {
-inline namespace MIGRAPH_INLINE_NS {
+inline namespace MIGRAPHX_INLINE_NS {
 
 bool try_compute_shape(const operation& op, const std::vector<instruction_ref>& args)
 {
@@ -27,6 +27,13 @@ void eliminate_contiguous::apply(program& p) const
 {
     for(auto ins : iterator_for(p))
     {
+        // skip the reshape operator for now, since there is a bug
+        // for the transpose followed by a reshape
+        if(ins->name() == "reshape")
+        {
+            continue;
+        }
+
         // Make a copy so we can modify it while we iterate
         auto args = ins->inputs();
         for(auto arg : ins->inputs())
@@ -47,5 +54,5 @@ void eliminate_contiguous::apply(program& p) const
     }
 }
 
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx

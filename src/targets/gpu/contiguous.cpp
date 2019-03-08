@@ -1,11 +1,9 @@
 #include <migraphx/gpu/contiguous.hpp>
-#include <migraphx/operators.hpp>
-#include <migraphx/manage_ptr.hpp>
-#include <migraphx/gpu/miopen.hpp>
-#include <utility>
+#include <migraphx/gpu/context.hpp>
+#include <migraphx/gpu/device/contiguous.hpp>
 
 namespace migraphx {
-inline namespace MIGRAPH_INLINE_NS {
+inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 
 shape miopen_contiguous::compute_shape(const std::vector<shape>& inputs) const
@@ -25,5 +23,5 @@ argument miopen_contiguous::compute(context& ctx,
 }
 
 } // namespace gpu
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx

@@ -5,10 +5,10 @@
 #include <migraphx/env.hpp>
 
 namespace migraphx {
-inline namespace MIGRAPH_INLINE_NS {
+inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 
-MIGRAPH_DECLARE_ENV_VAR(MIGRAPH_COPY_LITERALS)
+MIGRAPHX_DECLARE_ENV_VAR(MIGRAPHX_COPY_LITERALS)
 
 struct hip_load_literal
 {
@@ -33,12 +33,11 @@ void write_literals::apply(program& p) const
     {
         if(ins->name() == "@literal")
         {
-            if(enabled(MIGRAPH_COPY_LITERALS{}))
+            if(enabled(MIGRAPHX_COPY_LITERALS{}))
             {
                 literal l  = ins->get_literal();
                 auto pre   = p.add_literal(l);
-                auto s     = p.add_outline(l.get_shape());
-                auto alloc = p.insert_instruction(std::next(pre), hip_allocate{}, s);
+                auto alloc = p.insert_instruction(std::next(pre), hip_allocate{l.get_shape()});
                 p.replace_instruction(ins, hip_copy{}, pre, alloc);
             }
             else
@@ -53,5 +52,5 @@ void write_literals::apply(program& p) const
 }
 
 } // namespace gpu
-} // namespace MIGRAPH_INLINE_NS
+} // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
