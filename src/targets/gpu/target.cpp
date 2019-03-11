@@ -18,6 +18,7 @@
 #include <migraphx/rewrite_rnn.hpp>
 #include <migraphx/eliminate_concat.hpp>
 #include <migraphx/gpu/concat_gpu_opt.hpp>
+#include <migraphx/horizontal_fusion.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -50,6 +51,7 @@ std::vector<pass> target::get_passes(migraphx::context& gctx) const
         dead_code_elimination{},
         fuse_ops{&ctx},
         dead_code_elimination{},
+        horizontal_fusion{},    
         write_literals{&ctx},
         memory_coloring{"hip::allocate"},
         eliminate_workspace{},
