@@ -176,7 +176,6 @@ struct verify_program
 template <class T>
 int verify_program<T>::static_register = auto_register_verify_program<T>(); // NOLINT
 
-#if 0
 struct test_literals : verify_program<test_literals>
 {
     migraphx::program create_program() const
@@ -3015,7 +3014,6 @@ struct test_logsoftmax_1 : verify_program<test_logsoftmax_1<Axis>>
 template struct test_logsoftmax_1<0>;
 template struct test_logsoftmax_1<1>;
 
-#endif
 struct test_split : verify_program<test_split>
 {
     migraphx::program create_program() const
@@ -3023,11 +3021,6 @@ struct test_split : verify_program<test_split>
         migraphx::program p;
         migraphx::shape s{migraphx::shape::int32_type, {3, 3, 3}};
         migraphx::shape s2{migraphx::shape::int32_type, {27}};
-#if 0        
-        std::vector<int> data = {0,  9, 18, 1,  10, 19, 2,  11, 20, 3,  12, 21, 4, 13, 22, 5, 14, 23, 6,  15, 24, 7,  16, 25, 8,  17, 26};
-        auto x = p.add_literal(migraphx::literal{s, data});
-        auto y = p.add_literal(migraphx::literal{s2, data});
-#endif        
         auto x      = p.add_parameter("x", s);
         auto split0 = p.add_instruction(migraphx::op::split{0, {2, 1}}, x);
         auto split1 = p.add_instruction(migraphx::op::split{1, {2, 1}}, x);
