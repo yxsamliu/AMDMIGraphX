@@ -22,6 +22,9 @@ void horizontal_fusion_impl::register_all()
     register_op("gpu::convolution", EncodeConvCommon);
     register_op("gpu::conv_bias_relu", EncodeConvCommon);
     register_op("hip::add_relu", EncodeCommon);
+    register_op("convolution", EncodeConvCommon);
+    register_op("add", EncodeCommon);
+    register_op("relu", EncodeCommon);
 }
 
 static unsigned opcode_shift_count()
