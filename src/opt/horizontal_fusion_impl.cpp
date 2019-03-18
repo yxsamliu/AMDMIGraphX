@@ -180,6 +180,34 @@ void horizontal_fusion_impl::process(instruction_ref ins)
         }
     }
 }
+
+void horizontal_fusion_impl::transform()
+{
+    for (auto && val : values)
+    {
+        unsigned id = val.id;
+        if ((hash_instrs.find(id) == hash_instrs.end())
+            || (hash_instrs[id].size() <= 1))
+            continue;
+        std::vector<unsigned> cluster;
+        cluster.push_back(id);
+        unsigned cur = id;
+        int size = hash_instrs[id].size();
+        while ((hash_outputs.find(cur) != hash_outputs.end())
+               && (hash_outputs[cur].size() == 1))
+        {
+            unsigned output = (*(hash_outputs[cur].begin()))->id;
+            if ((hash_instrs.find(output) != hash_instrs.end())
+                && (hash_instrs[output].size() == size))
+            {
+                cluster.push_back(output);
+                cur = output;
+            } else
+                break;
+        }
+    }
+
+}
            
 void horizontal_fusion_impl::run()
 {
@@ -194,6 +222,7 @@ void horizontal_fusion_impl::run()
         cur_point++;
     }
     dump_hash_tree();
+    transform();
 }
 
 #ifdef MIGRAPHX_DEBUG_H_FUSION

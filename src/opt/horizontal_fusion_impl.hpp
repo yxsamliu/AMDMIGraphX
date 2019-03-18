@@ -122,6 +122,7 @@ struct horizontal_fusion_impl
     
     void register_op(std::string, Encoder);
     void register_all();
+    void transform();
     
 #ifdef MIGRAPHX_DEBUG_H_FUSION
     void dump_program();
