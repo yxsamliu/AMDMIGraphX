@@ -95,7 +95,7 @@ void miopen_convolution::finalize(context& ctx,
     auto size = inputs.at(2).bytes();
     auto ws   = compile(ctx, output_shape, std::move(inputs));
     if(ws.bytes() > size)
-        MIGRAPHX_THROW("Workspace has changed during finalization.");
+        MIGRAPHX_THROW("Workspace has changed during finalization: " + std::to_string(ws.bytes()));
 }
 
 } // namespace gpu

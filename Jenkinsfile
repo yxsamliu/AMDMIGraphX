@@ -21,7 +21,7 @@ def rocmtestnode(variant, name, body) {
         }
     }
     node(name) {
-        withEnv(['HSA_ENABLE_SDMA=0', 'MIOPEN_DEBUG_GCN_ASM_KERNELS=0', 'MIOPEN_DEBUG_CONV_DIRECT=0']) {
+        withEnv(['HSA_ENABLE_SDMA=0', 'MIOPEN_DEBUG_GCN_ASM_KERNELS=0']) {
             stage("checkout ${variant}") {
                 checkout scm
             }
