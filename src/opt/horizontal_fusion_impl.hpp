@@ -4,6 +4,7 @@
 #include <migraphx/config.hpp>
 
 #include <set>
+#include <stack>
 
 #define MIGRAPHX_DEBUG_H_FUSION
 
@@ -14,8 +15,17 @@ inline namespace MIGRAPHX_INLINE_NS {
 // Nodes representing hashed instructions.
 struct hash_value
 {
+    enum hash_attr
+    {
+        root = 0,
+        fused
+    };
     unsigned id = 0;
     unsigned cur_point = 0;
+    unsigned mask = 0;
+    bool is_root()  const { return (mask & (1 << root)) != 0; }
+    bool is_fused() const { return (mask & (1 << fused)) != 0; }
+    void set_root() { mask |= (1 << root); }
 };
 
 using hash_value_ptr = hash_value*;
@@ -67,11 +77,6 @@ struct horizontal_fusion_impl
     void run();
     void process(instruction_ref ins);
     hash_value_ptr hash(instruction_ref ins);
-    void add_root(hash_value_ptr ptr)
-    {
-        root_values.push_back(ptr);
-    }
-
     hash_value& get_value(unsigned id) { return values[id]; }
 
     hash_value& create_value(instruction_ref ins);
@@ -120,9 +125,28 @@ struct horizontal_fusion_impl
         return opcode_table[str];
     }
     
-    void register_op(std::string, Encoder);
+    void register_op(std::string, Encoder, int);
     void register_all();
     void transform();
+    std::vector<instruction_ref> get_instrs(unsigned hash_id)
+    {
+        assert(hash_instrs.find(hash_id) != hash_instrs.end());
+        std::vector<instruction_ref> instrs;
+        for ( auto && point: hash_instrs[hash_id])
+        {            
+            assert(point2_instr.find(point) != point2_instr.end());
+            instrs.push_back(point2_instr[point]);
+        }
+        return instrs;
+    }
+    bool compare_inputs(std::vector<instruction_ref>&, std::vector<instruction_ref>&, instruction_ref, int);
+    std::vector<instruction_ref> walk(instruction_ref, std::unordered_map<instruction_ref, bool>&);
+    void concat(std::vector<instruction_ref>&, std::unordered_map<instruction_ref, instruction_ref>&, int);
+    int find_axis(instruction_ref, std::unordered_map<instruction_ref, bool>&);
+    int find_unique_axis(instruction_ref, instruction_ref);
+    int find_axis(instruction_ref, int dim);
+    bool match_dim(instruction_ref, instruction_ref, int axis);
+    bool is_conv(instruction_ref);
     
 #ifdef MIGRAPHX_DEBUG_H_FUSION
     void dump_program();
@@ -140,12 +164,11 @@ struct horizontal_fusion_impl
     std::unordered_map<key_type, hash_value_ptr> encode2_value;
     // Map an operation name to its encoder function.
     std::unordered_map<std::string, Encoder> op_registry;
+    std::unordered_map<std::string, int> op_flag;
     // Map an opcode string to a value.
     String2Val opcode_table;
     // Universe of hash values.
     std::vector<hash_value> values;
-    // A collection of root nodes in the hash_value tree.
-    std::vector<hash_value_ptr> root_values;
     // Map of hash value id to hash-value inputs.
     std::unordered_map<unsigned, std::set<hash_value_ptr>> hash_inputs;
     // Map of hash value id to hash-value outputs.

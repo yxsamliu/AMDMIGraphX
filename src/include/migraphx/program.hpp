@@ -90,6 +90,7 @@ struct program
     instruction_ref end() const;
 
     shape get_shape() const;
+    void set_shape();
 
     context& get_context() const;
 

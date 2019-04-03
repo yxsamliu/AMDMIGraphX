@@ -37,6 +37,7 @@ struct instruction
     bool valid() const;
 
     shape get_shape() const;
+    void set_shape(shape);
     const literal& get_literal() const;
 
     const operation& get_operator() const;
@@ -67,7 +68,7 @@ struct instruction
 
     static void backreference(instruction_ref ref);
 
-    static void replace_argument(instruction_ref ins, instruction_ref old, instruction_ref new_ins);
+    static void replace_argument(instruction_ref ins, instruction_ref old, instruction_ref new_ins, bool recompute_shape = true);
 
     static void
     replace(instruction_ref ins, operation o, const shape& r, std::vector<instruction_ref> args);
@@ -78,6 +79,7 @@ struct instruction
 
     static instruction_ref get_output_alias(instruction_ref ins, bool shallow = false);
 
+    int  id = -1;
     private:
     // internal
     void replace(operation o, const shape& r, std::vector<instruction_ref> args);

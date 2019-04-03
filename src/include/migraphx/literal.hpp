@@ -23,15 +23,15 @@ struct literal : raw_data<literal>
     literal() {}
 
     template <class U, class T = deduce<U>, shape::type_t ShapeType = shape::get_type<T>{}>
-    literal(U x) : buffer(make_shared_array<char>(sizeof(T))), m_shape(ShapeType)
+    literal(U x) : buffer(make_array<char>(sizeof(T))), m_shape(ShapeType)
     {
         static_assert(std::is_trivially_copyable<T>{}, "Literals can only be trivial types");
-        *(reinterpret_cast<T*>(buffer.get())) = x;
+        *(reinterpret_cast<T*>(buffer)) = x;
     }
 
     template <class T>
     literal(const shape& s, const std::vector<T>& x)
-        : buffer(make_shared_array<char>(s.bytes())), m_shape(s)
+        : buffer(make_array<char>(s.bytes())), m_shape(s)
     {
         static_assert(std::is_trivially_copyable<T>{}, "Literals can only be trivial types");
         fill(x.begin(), x.end());
@@ -39,7 +39,7 @@ struct literal : raw_data<literal>
 
     template <class T>
     literal(const shape& s, const std::initializer_list<T>& x)
-        : buffer(make_shared_array<char>(s.bytes())), m_shape(s)
+        : buffer(make_array<char>(s.bytes())), m_shape(s)
     {
         static_assert(std::is_trivially_copyable<T>{}, "Literals can only be trivial types");
         fill(x.begin(), x.end());
@@ -47,33 +47,35 @@ struct literal : raw_data<literal>
 
     template <class Iterator>
     literal(const shape& s, Iterator start, Iterator end)
-        : buffer(make_shared_array<char>(s.bytes())), m_shape(s)
+        : buffer(make_array<char>(s.bytes())), m_shape(s)
     {
         fill(start, end);
     }
 
-    literal(const shape& s, const char* x) : buffer(make_shared_array<char>(s.bytes())), m_shape(s)
+    literal(const shape& s, const char* x) : buffer(make_array<char>(s.bytes())), m_shape(s)
     {
-        std::copy(x, x + s.bytes(), buffer.get());
+        std::copy(x, x + s.bytes(), buffer);
     }
 
     /// Whether data is available
     bool empty() const { return this->buffer == nullptr; }
 
     /// Provides a raw pointer to the data
-    const char* data() const { return this->buffer.get(); }
+    const char* data() const { return this->buffer; }
 
     const shape& get_shape() const { return this->m_shape; }
 
     /// Convert the data to an argument
     argument get_argument() const
     {
-        std::vector<char> b(buffer.get(), buffer.get() + m_shape.bytes());
+        std::vector<char> b(buffer, buffer + m_shape.bytes());
         return {m_shape, [b]() mutable { return b.data(); }};
     }
 
+    void delete_data() const { delete buffer; }
+
     private:
-    std::shared_ptr<char> buffer;
+    char* buffer;
     shape m_shape;
 
     template <class Iterator>
@@ -81,13 +83,13 @@ struct literal : raw_data<literal>
     {
         if(m_shape.standard())
         {
-            m_shape.visit_type([&](auto as) { std::copy(start, end, as.from(buffer.get())); });
+            m_shape.visit_type([&](auto as) { std::copy(start, end, as.from(buffer)); });
         }
         else
         {
             auto it = start;
             m_shape.visit_type([&](auto as) {
-                auto output = make_view(m_shape, as.from(buffer.get()));
+                auto output = make_view(m_shape, as.from(buffer));
                 shape_for_each(output.get_shape(), [&](const auto& idx) {
                     output(idx.begin(), idx.end()) = *it;
                     it++;

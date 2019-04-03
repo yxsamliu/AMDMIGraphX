@@ -11,20 +11,21 @@ static unsigned kernel_bits = 8;
 
 // Register a single operation.
 // 1st arg: operation name. 2nd arg: encoding function.
-void horizontal_fusion_impl::register_op(std::string name, Encoder func)
+void horizontal_fusion_impl::register_op(std::string name, Encoder func, int flag)
 {
     op_registry[name] = func;
+    op_flag[name] = flag;
 }
            
 // Register operations.
 void horizontal_fusion_impl::register_all()
 {
-    register_op("gpu::convolution", EncodeConvCommon);
-    register_op("gpu::conv_bias_relu", EncodeConvCommon);
-    register_op("hip::add_relu", EncodeCommon);
-    register_op("convolution", EncodeConvCommon);
-    register_op("add", EncodeCommon);
-    register_op("relu", EncodeCommon);
+    register_op("gpu::convolution", EncodeConvCommon, 1);
+    register_op("gpu::conv_bias_relu", EncodeConvCommon, 1);
+    register_op("hip::add_relu", EncodeCommon, 0);
+    register_op("convolution", EncodeConvCommon, 1);
+    register_op("add", EncodeCommon, 0);
+    register_op("relu", EncodeCommon, 0);
 }
 
 static unsigned opcode_shift_count()
@@ -91,6 +92,13 @@ encode_info EncodeConvCommon(instruction_ref ins, Ins2Val& instr2_value, unsigne
     } else {
         return encode_info(0, false);
     }
+}
+
+bool horizontal_fusion_impl::is_conv(instruction_ref ins)
+{
+    if (op_flag.find(ins->name()) == op_flag.end())
+        return false;
+    return (op_flag[ins->name()] == 1);
 }
 
 // Hash given instruction.           
@@ -171,7 +179,7 @@ void horizontal_fusion_impl::process(instruction_ref ins)
     {            
         // Create a value for this instruction.
         hash_value& value = create_value(ins);
-        add_root(&value);
+        value.set_root();
         // Flag children to be hashed.
         for (auto&& output : ins->outputs())
         {
@@ -181,6 +189,188 @@ void horizontal_fusion_impl::process(instruction_ref ins)
     }
 }
 
+// Find the first axis that matches given dim.
+int horizontal_fusion_impl::find_axis(instruction_ref ins, int dim)
+{
+    int ndx = 0;
+    for (auto&& size : ins->get_shape().lens())
+    {
+        if (size == dim)
+            return ndx;
+        ndx++;
+    }
+    return -1;
+}
+
+// Check whether ins1 and ins2 match in all dimensions excluding axis.
+bool horizontal_fusion_impl::match_dim(instruction_ref ins1, instruction_ref ins2, int axis)
+{
+    auto lens1 = ins1->get_shape().lens();
+    auto lens2 = ins2->get_shape().lens();
+    if (lens1.size() != lens2.size())
+        return false;
+    int ndx = 0;
+    for (auto&& size : lens1)
+    {
+        if ((size != lens2.at(ndx)) && (ndx != axis))
+            return false;
+        ndx++;
+    }
+    return true;
+}
+    
+bool horizontal_fusion_impl::compare_inputs(std::vector<instruction_ref>& input1, std::vector<instruction_ref>& input2, instruction_ref base_ins, int base_axis)
+{
+    if (input1.size() != input2.size())
+        return false;
+    int ndx = 0;
+    bool check_conv_kernel = is_conv(base_ins);
+    
+    for (auto && ins1 : input1)
+    {
+        instruction_ref ins2 = input2.at(ndx++);
+        if (ins1->name() != ins2->name())
+            return false;
+
+        auto base_lens = base_ins->get_shape().lens();
+        int base_dim = base_lens.at(base_axis);
+        if (check_conv_kernel || (ins1->outputs().at(0)->name() == "broadcast"))
+        {
+            // Find concat axis for convolution's kernel.
+            int axis = find_axis(ins2, base_dim);
+            if (axis == -1)
+                return false;
+            if (!match_dim(ins1, ins2, axis))
+                return false;
+        } 
+    }
+
+    return true;
+}
+
+void horizontal_fusion_impl::concat(std::vector<instruction_ref>& instrs, std::unordered_map<instruction_ref, instruction_ref>& root, int root_axis)
+{
+    instruction_ref ins0 = instrs.at(0);
+    shape s = ins0->get_shape();
+    std::vector<std::size_t> new_lens = s.lens();
+    instruction_ref base = root[ins0];
+    int axis = root_axis;
+    std::vector<std::size_t> root_lens = base->get_shape().lens();
+    
+    if (is_conv(base) || (ins0->outputs().at(0)->name() == "broadcast"))
+    {        
+        int dim = base->get_shape().lens().at(root_axis);
+        axis = find_axis(ins0, dim);
+    }
+    int sum = 0;
+    int root_sum = 0;
+    for (auto&& ins : instrs)
+    {
+        sum += ins->get_shape().lens().at(axis);
+        root_sum += root[ins]->get_shape().lens().at(root_axis);
+    }
+    new_lens[axis] = sum;
+    shape new_s = shape(s.type(), new_lens);
+    unsigned long long unit_slice = 1;
+    int ndx = 0;
+    unsigned long long new_elements = 1;
+    for (auto&& len : s.lens())
+    {
+        if (ndx > axis)
+            unit_slice *= len;
+        if (ndx != axis)
+            new_elements *= len;
+        ndx++;
+    }
+    new_elements *= sum;
+    unsigned type_size = s.type_size();
+
+    if (ins0->name() == "@literal")
+    {
+        // concat literals.
+        unsigned long long total_bytes = new_elements * type_size;
+        std::vector<char> input(total_bytes, 0);
+        std::vector<unsigned long long> bytes_per_slice;
+
+        for (auto&& ins : instrs)
+            bytes_per_slice.push_back(ins->get_shape().lens().at(axis) * unit_slice * type_size);
+
+        unsigned out_ndx = 0;
+        int slice_ndx = 0;
+        while (out_ndx < total_bytes)
+        {
+            unsigned ins_ndx = 0;
+            for (auto && ins : instrs)
+            {
+                unsigned long long bytes = bytes_per_slice[ins_ndx];
+                for (auto i = 0; i < bytes ; ++i)
+                    input[out_ndx++] = ins->get_literal().data()[slice_ndx * bytes + i];
+                ins_ndx++;
+            }
+            slice_ndx++;
+        }
+        shape new_shape{s.type(), new_lens};
+        auto new_literal = p_program->add_literal(literal{new_shape, input});
+        assert(ins0->outputs().size() == 1);
+        instruction_ref output = ins0->outputs().at(0);
+
+        if (output == base)
+        {
+            if (root_lens[root_axis] != root_sum)
+            {
+                // change root's shape.
+                root_lens[root_axis] = root_sum;
+                output->set_shape({base->get_shape().type(), root_lens});
+            }
+        }
+        else
+            assert(false);
+        instruction::replace_argument(output, ins0, new_literal);
+    }
+    else
+        assert(false);
+    
+}
+
+// If ins and input only diff in one axis, return that axis.
+int horizontal_fusion_impl::find_unique_axis(instruction_ref ins, instruction_ref input)
+{
+    auto lens1 = ins->get_shape().lens();
+    auto lens2 = input->get_shape().lens();
+    if (lens1.size() != lens2.size())
+        return false;
+    int count = 0;
+    int ndx = 0;
+    int ret = -1;
+    for (auto && size : lens1)
+    {
+        if (size != lens2.at(ndx))
+        {            
+            count++;
+            ret = ndx;
+        }
+        ndx++;
+    }
+    return (count == 1) ? ret : -1;
+
+}
+
+int horizontal_fusion_impl::find_axis(instruction_ref ins, std::unordered_map<instruction_ref, bool>& is_common)
+{
+    int axis = -1;
+    for (auto&& input : ins->inputs())
+    {
+        if (is_common.find(input) != is_common.end())
+        {
+            int cur_axis = find_unique_axis(ins, input);
+            if ((cur_axis == -1) || ((axis != -1) && (cur_axis != axis)))
+                return -1;
+            axis = cur_axis;
+        }
+    }
+    return axis;
+}
+                                                       
 void horizontal_fusion_impl::transform()
 {
     for (auto && val : values)
@@ -193,22 +383,150 @@ void horizontal_fusion_impl::transform()
         cluster.push_back(id);
         unsigned cur = id;
         int size = hash_instrs[id].size();
+        // Find a sub-tree of the hash tree to be fused together.
+        // Every node in the sub-tree contain the same amount of instructions.
         while ((hash_outputs.find(cur) != hash_outputs.end())
                && (hash_outputs[cur].size() == 1))
         {
             unsigned output = (*(hash_outputs[cur].begin()))->id;
             if ((hash_instrs.find(output) != hash_instrs.end())
                 && (hash_instrs[output].size() == size))
-            {
+                {
                 cluster.push_back(output);
                 cur = output;
             } else
                 break;
         }
+
+        std::unordered_map<instruction_ref, bool> visited;
+        std::unordered_map<instruction_ref, instruction_ref> root;
+        for (auto && hash_id : cluster)
+        {
+            assert(hash_inputs.find(hash_id) != hash_inputs.end());
+            bool doit = true;
+            // Flag common inputs which will not be concated.
+            for (auto && input : hash_inputs[hash_id])
+            {
+                std::vector<instruction_ref> instrs = get_instrs(input->id);
+                if (instrs.size() != 1) {
+                    doit = false;
+                    break;
+                }
+                visited[instrs.at(0)] = true;
+            }
+            if (!doit)
+                continue;
+
+            // collect and compare inputs to be concated.
+            std::vector<std::vector<instruction_ref>> all_inputs;
+            int axis = -1;
+            std::vector<instruction_ref> base_instrs = get_instrs(hash_id);
+            for (auto && ins : base_instrs)
+             {
+                 // Find concat axis for ins.
+                 axis = (axis == -1) ? find_axis(ins, visited) : axis;
+                 if (axis == -1)
+                 {
+                     doit = false;
+                     break;
+                 }
+                 std::vector<instruction_ref> inputs = walk(ins, visited);
+                 if (inputs.empty() || (!all_inputs.empty() && !compare_inputs(all_inputs.at(0), inputs, ins, axis)))
+                 {
+                     doit = false;
+                     break;
+                 }
+                 else
+                 {
+                     for (auto&& input : inputs)
+                         root[input] = ins;
+                     all_inputs.push_back(inputs);
+                 }
+             }
+             if (!doit)
+                 continue;
+             
+             std::vector<instruction_ref> input0 = all_inputs.at(0);
+             // concat inputs.
+             for (int ndx = 0; ndx < input0.size(); ndx++)
+             {
+                 std::vector<instruction_ref> instrs;
+                 for (auto&& input : all_inputs)
+                 {
+                     instrs.push_back(input.at(ndx));
+                 }
+                 concat(instrs, root, axis);
+             }
+             // remove redundant inputs.
+             for (auto&& input : all_inputs)
+             {                        
+                 for (int ndx = 0; ndx < input.size(); ndx++)
+                 {
+                     instruction_ref ins = input.at(ndx);
+                     bool is_literal = (ins->name() == "@literal");
+                     if ((ndx == 0) && !is_literal)
+                         continue;
+                     if (is_literal)
+                         ins->get_literal().delete_data();
+                     p_program->remove_instruction(ins);
+                 }
+             }
+             // remove redundant roots.
+             instruction_ref root_ins = base_instrs.at(0);
+             for (int ndx = 1; ndx < base_instrs.size(); ndx++)
+             {
+                 instruction_ref base = base_instrs.at(ndx);
+                 std::vector<instruction_ref> outputs;
+                 for (auto && output : base->outputs())
+                     outputs.push_back(output);
+                 for (auto && output : outputs)
+                     instruction::replace_argument(output, base, root_ins, false);
+                 p_program->remove_instruction(base);
+             }
+             // update hash tree.
+             unsigned first = *(hash_instrs[id].begin());
+             hash_instrs[id].clear();
+             hash_instrs[id].insert(first);
+             std::cout << *p_program << std::endl;
+             dump_hash_tree();
+        }
+    }
+}
+
+std::vector<instruction_ref> horizontal_fusion_impl::walk(instruction_ref ins, std::unordered_map<instruction_ref, bool>& visited)
+{
+    
+    std::stack<instruction_ref> stk;
+    for (auto && input : ins->inputs())
+    {
+        if (visited.find(input) == visited.end())
+            stk.push(input);
     }
 
+    std::vector<instruction_ref> ret;
+    while (!stk.empty())
+    {
+        instruction_ref top = stk.top();
+        if ((top->inputs().size() > 1) || (top->outputs().size() > 1)
+            || (top->inputs().empty() && (top->name() != "@literal")))
+        {
+            ret.clear();
+            return ret;
+        }
+        else if (top->inputs().empty() || (visited.find(top) != visited.end()))
+        {
+            ret.push_back(top);
+            stk.pop();
+        } 
+        else {
+            instruction_ref input = top->inputs().at(0);
+            stk.push(input);
+            visited[top] = true;
+        }
+    }
+    return ret;
 }
-           
+               
 void horizontal_fusion_impl::run()
 {
 
@@ -219,6 +537,7 @@ void horizontal_fusion_impl::run()
     {
         process(ins);
         point2_instr[cur_point] = ins;
+        ins->id = cur_point;
         cur_point++;
     }
     dump_hash_tree();
@@ -251,6 +570,12 @@ void horizontal_fusion_impl::dump_hash_value(hash_value& val)
         std::cout << " instrs: ";
         for (auto && point : hash_instrs[id])
         {
+            if (point2_instr.find(point) != point2_instr.end())
+            {
+                int ins_id = point2_instr[point]->id;
+                if (ins_id > 0)
+                    std::cout << " (" << ins_id << ")";
+            }
             std::cout << " @" << point;
         }
     }

@@ -16,7 +16,7 @@ argument logsoftmax(hipStream_t stream,
                     std::vector<migraphx::argument> args,
                     int axis)
 {
-
+#if 0
     auto lens              = output_shape.lens();
     std::size_t batch_size = std::accumulate(
         lens.begin(), lens.begin() + axis, std::size_t{1}, std::multiplies<std::size_t>());
@@ -60,7 +60,7 @@ argument logsoftmax(hipStream_t stream,
             }
         });
     });
-
+#endif
     return args.back();
 }
 

@@ -81,6 +81,7 @@ bool instruction::valid() const
 }
 
 shape instruction::get_shape() const { return result; }
+void instruction::set_shape(shape s) { result = s;}           
 const literal& instruction::get_literal() const
 {
     assert(op.name() == "@literal");
@@ -126,11 +127,13 @@ void instruction::backreference(instruction_ref ref)
 
 void instruction::replace_argument(instruction_ref ins,
                                    instruction_ref old,
-                                   instruction_ref new_ins)
+                                   instruction_ref new_ins,
+                                   bool recompute_shape)
 {
     ins->replace_argument(old, new_ins);
     backreference(ins);
-    ins->recompute_shape();
+    if (recompute_shape)
+        ins->recompute_shape();
 }
 
 void instruction::replace(instruction_ref ins,
