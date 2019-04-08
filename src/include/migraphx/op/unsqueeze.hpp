@@ -29,13 +29,13 @@ struct unsqueeze
     std::string name() const { return "unsqueeze"; }
     shape compute_shape(std::vector<shape> inputs) const
     {
-        auto input_shape     = inputs[0];
-        auto type            = input_shape.type();
-        auto old_lens        = input_shape.lens();
+        auto input_shape = inputs[0];
+        auto type        = input_shape.type();
+        auto old_lens    = input_shape.lens();
         // restore a scalar back to its original tensor layout
-        if (input_shape.scalar())
+        if(input_shape.scalar())
         {
-            if (old_lens.size() == 1)
+            if(old_lens.size() == 1)
                 return shape{type, old_lens, {1}};
             return shape{type, old_lens};
         }
