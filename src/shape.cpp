@@ -81,8 +81,17 @@ shape::shape() : impl(shape_impl::default_shape()) {}
 
 shape::shape(type_t t) : impl(std::make_shared<shape_impl>(t)) {}
 shape::shape(type_t t, std::vector<std::size_t> l)
-    : impl(std::make_shared<shape_impl>(t, std::move(l)))
+    
 {
+    if(l.size() == 1 and l.front() == 1)
+    {
+        impl = std::make_shared<shape_impl>(t, std::move(l), std::vector<std::size_t>{0});
+    }
+    else
+    {
+        impl = std::make_shared<shape_impl>(t, std::move(l));
+    }
+    
 }
 shape::shape(type_t t, std::vector<std::size_t> l, std::vector<std::size_t> s)
     : impl(std::make_shared<shape_impl>(t, std::move(l), std::move(s)))
