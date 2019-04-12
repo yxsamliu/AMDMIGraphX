@@ -84,6 +84,8 @@ rocmtest tidy: rocmnode('rocmtest') { cmake_build ->
             CXX=hcc cmake .. 
             make -j8 -k analyze
         '''
+        def warnings = scanForIssues tool: clang()
+        publishIssues ignoreFailedBuilds: false, issues: [warnings]
     }
 }, format: rocmnode('rocmtest') { cmake_build ->
     stage('Clang Format') {
