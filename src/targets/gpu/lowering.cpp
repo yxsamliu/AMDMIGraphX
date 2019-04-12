@@ -121,6 +121,7 @@ struct miopen_apply
                 check_shape(s, apply_map.at(it->name())(it));
             }
         }
+
     }
 
     instruction_ref insert_allocation(instruction_ref ins, const shape& s, std::string tag = "")

@@ -143,10 +143,15 @@ struct horizontal_fusion_impl
     std::vector<instruction_ref> walk(instruction_ref, std::unordered_map<instruction_ref, bool>&);
     void concat(std::vector<instruction_ref>&, std::unordered_map<instruction_ref, instruction_ref>&, int);
     int find_axis(instruction_ref, std::unordered_map<instruction_ref, bool>&);
-    int find_unique_axis(instruction_ref, instruction_ref);
     int find_axis(instruction_ref, int dim);
+    int find_axis(instruction_ref, instruction_ref, int);
+    int find_unique_axis(instruction_ref, instruction_ref);
     bool match_dim(instruction_ref, instruction_ref, int axis);
     bool is_conv(instruction_ref);
+    void remove_redundant_roots(std::vector<instruction_ref>&);
+    void update_hash_tree(unsigned id);
+    int get_channel_axis() { return 1; }
+    int get_conv_output_axis() { return 0; }
     
 #ifdef MIGRAPHX_DEBUG_H_FUSION
     void dump_program();

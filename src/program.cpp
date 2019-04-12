@@ -315,6 +315,7 @@ void program::compile(const target& t, tracer trace)
         trace();
 #endif
     }
+    std::cout << *this << std::endl;
     auto invalid = this->validate();
     if(invalid != impl->instructions.end())
     {

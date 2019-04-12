@@ -41,6 +41,7 @@ struct instruction
     const literal& get_literal() const;
 
     const operation& get_operator() const;
+    void set_operator(operation&);
 
     std::string name() const;
 

@@ -89,6 +89,7 @@ const literal& instruction::get_literal() const
 }
 
 const operation& instruction::get_operator() const { return op; }
+void instruction::set_operator(operation& o) { op = o; }
 
 std::string instruction::name() const { return op.name(); }
 
