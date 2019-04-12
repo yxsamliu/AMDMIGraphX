@@ -49,54 +49,8 @@ include(ROCMClangTidy)
 rocm_enable_clang_tidy(
     CHECKS
         *
-        -android-cloexec-fopen
-        -clang-analyzer-alpha.core.CastToStruct
-        -clang-analyzer-optin.performance.Padding
-        -clang-diagnostic-deprecated-declarations
-        -clang-diagnostic-extern-c-compat
-        -clang-diagnostic-disabled-macro-expansion
-        -clang-diagnostic-unused-command-line-argument
-        -cppcoreguidelines-pro-bounds-array-to-pointer-decay
-        -cppcoreguidelines-pro-bounds-constant-array-index
-        -cppcoreguidelines-pro-bounds-pointer-arithmetic
-        -cppcoreguidelines-pro-type-member-init
-        -cppcoreguidelines-pro-type-reinterpret-cast
-        -cppcoreguidelines-pro-type-union-access
-        -cppcoreguidelines-pro-type-vararg
-        -cppcoreguidelines-special-member-functions
-        -fuchsia-*
-        -google-readability-braces-around-statements
-        -google-readability-todo
-        -google-runtime-int
-        -google-runtime-references
-        -hicpp-braces-around-statements
-        -hicpp-explicit-conversions
-        -hicpp-no-array-decay
-        -hicpp-special-member-functions
-        -hicpp-uppercase-literal-suffix
-        -hicpp-use-override
-        # This check is broken
-        -llvm-header-guard
-        -llvm-include-order
-        -misc-macro-parentheses
-        -modernize-use-override
-        -modernize-pass-by-value
-        -modernize-use-default-member-init
-        -modernize-use-transparent-functors
-        -readability-braces-around-statements
-        -readability-else-after-return
-        -readability-named-parameter
-        -readability-uppercase-literal-suffix,
-        -*-avoid-c-arrays
-        -*-explicit-constructor
-        -*-magic-numbers
-        -*-non-private-member-variables-in-classes
-        -*-use-auto
-        -*-use-emplace
-        -*-use-equals-default
     ERRORS
         *
-        -readability-inconsistent-declaration-parameter-name
     HEADER_FILTER
         ".*hpp"
     EXTRA_ARGS
@@ -115,14 +69,6 @@ rocm_enable_cppcheck(
         ConfigurationNotChecked
         unmatchedSuppression
         unusedFunction
-        noExplicitConstructor
-        passedByValue
-        unusedStructMember
-        functionStatic
-        functionConst:*program.*
-        shadowFunction
-        shadowVar
-        definePrefix:*test/include/test.hpp
     FORCE
     INCONCLUSIVE
     RULE_FILE
