@@ -254,7 +254,7 @@ struct miopen_apply
             const shape& out_s = ins->get_shape();
             std::vector<instruction_ref> refs = ins->inputs();
             
-            if (op.axis == 0)
+            if ((op.axis == 0) && (op.slice_selector < 0))
             {
                 std::vector<int64_t> dims;
                 for (auto && dim : out_s.lens())
@@ -272,7 +272,7 @@ struct miopen_apply
             auto map = prog->add_literal(migraphx::literal{migraphx::shape{migraphx::shape::int32_type, lens}, index_map});
             refs.push_back(map);
             refs.push_back(output);
-            return prog->replace_instruction(ins, hip_split{}, refs);
+            return prog->replace_instruction(ins, hip_split{op}, refs);
         });
     }
 };

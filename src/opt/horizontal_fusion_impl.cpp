@@ -604,6 +604,7 @@ void horizontal_fusion_impl::transform()
                 }
                 instruction::replace_argument(output, last_ins, load_ins, false);
             }
+
         }
     }
 }

@@ -12,7 +12,8 @@ namespace device {
 
 argument split(hipStream_t stream,
                const migraphx::shape& output_shape,
-               std::vector<argument> args);
+               std::vector<argument> args,
+               unsigned offset);
 
 } // namespace device
 } // namespace gpu

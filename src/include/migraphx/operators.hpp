@@ -1360,14 +1360,48 @@ struct split
 {
     int axis = 0;
     std::vector<int> slice_dims;
+    int slice_selector = -1;
     std::string name() const { return "split"; }
+
+    std::vector<unsigned> compute_slice_elements(shape input_shape) const
+    {
+        assert(slice_selector >= 0);
+        unsigned accum = 1;
+        int axis_id = 0;
+        
+         //  compute accumulated elements on un-splitted axises.
+        for(auto&& len : input_shape.lens())
+        {
+            if (axis_id != axis)
+                accum *= len;
+            axis_id++;
+        }
+            
+        // compute number of elements for each slice.
+        std::vector<unsigned> slice_elements;
+        for (auto&& dim: slice_dims)
+        {
+            slice_elements.push_back(accum * dim);
+        }
+        return slice_elements;
+    }
 
     shape compute_shape(std::vector<shape> inputs) const
     {
-        check_shapes{inputs, *this}.has(1);
+        // check_shapes{inputs, *this}.has(1);
         auto input_shape = inputs[0];
         std::vector<std::size_t> out_dims;
-        out_dims.push_back(input_shape.elements());
+
+        if (slice_selector >= 0)
+        {
+            std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
+            assert(slice_selector < slice_dims.size());    
+            out_dims.push_back(slice_elements[slice_selector]);
+        }
+        else
+        {                           
+            out_dims.push_back(input_shape.elements());
+        }
         return {input_shape.type(), out_dims};
     }
 
@@ -1438,20 +1472,41 @@ struct split
         return index_map;
     }
 
+    unsigned compute_offset(shape input_shape) const
+    {
+        assert(slice_selector >= 0);
+        unsigned offset = 0;
+        std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
+        int slice_ndx = 0;
+        for (auto&& ele : slice_elements)
+        {
+            if (slice_ndx == slice_selector)
+                break;
+            offset += ele;
+            slice_ndx++;
+        }
+        return offset;
+    }
+
     argument compute(shape output_shape, std::vector<argument> args) const
     {
         auto arg0 = args[0];
-        if(axis == 0)
+        if((axis == 0) && (slice_selector == -1))
             return {std::move(output_shape), std::move(arg0.data)};
 
-        std::vector<int> index_map = compute_index_map(arg0.get_shape());
+        shape input_shape = arg0.get_shape();
+        std::vector<int> index_map = compute_index_map(input_shape);
         argument result{output_shape};
-        std::size_t nelements = arg0.get_shape().elements();
+        std::size_t nelements = output_shape.elements();
+        unsigned offset = 0;
+        if (slice_selector >= 0)
+            offset = compute_offset(input_shape);
+
         visit_all(result, arg0)([&](auto output, auto input) {
             auto slice = make_view(output_shape, output.data());
             for(std::size_t i = 0; i < nelements; i++)
             {
-                slice[i] = input[index_map[i]];
+                slice[i] = input[index_map[i + offset]];
             }
         });
         return result;

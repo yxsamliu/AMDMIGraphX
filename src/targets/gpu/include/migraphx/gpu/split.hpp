@@ -12,6 +12,7 @@ struct context;
 
 struct hip_split
 {
+    op::split op;
     std::string name() const { return "gpu::split"; }
     shape compute_shape(std::vector<shape> inputs) const;
     argument

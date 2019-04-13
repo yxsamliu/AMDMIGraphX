@@ -10,10 +10,8 @@ shape hip_split::compute_shape(std::vector<shape> inputs) const
 {
     inputs.pop_back();
     check_shapes{inputs, *this}.has(2);
-    auto input_shape = inputs[0];
-    std::vector<std::size_t> out_dims;
-    out_dims.push_back(input_shape.elements());
-    return {input_shape.type(), out_dims};
+    op.compute_shape(inputs);
+    return op.compute_shape(inputs);
 }
 
 argument hip_split::compute(context& ctx,
@@ -21,7 +19,10 @@ argument hip_split::compute(context& ctx,
                             const std::vector<argument>& args) const
 {
     auto arg0 = args[0];
-    return device::split(ctx.get_stream().get(), output_shape, args);
+    unsigned offset = 0;
+    if (op.slice_selector >= 0)
+        offset = op.compute_offset(args.at(0).get_shape());
+    return device::split(ctx.get_stream().get(), output_shape, args, offset);
 }
 
 } // namespace gpu
