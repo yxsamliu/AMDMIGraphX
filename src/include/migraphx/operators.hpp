@@ -1360,12 +1360,11 @@ struct split
 {
     int axis = 0;
     std::vector<int> slice_dims;
-    int slice_selector = -1;
+    std::pair<int, int> slice_selector = {-1, -1};
     std::string name() const { return "split"; }
 
     std::vector<unsigned> compute_slice_elements(shape input_shape) const
     {
-        assert(slice_selector >= 0);
         unsigned accum = 1;
         int axis_id = 0;
         
@@ -1392,11 +1391,19 @@ struct split
         auto input_shape = inputs[0];
         std::vector<std::size_t> out_dims;
 
-        if (slice_selector >= 0)
+        if (slice_selector.first >= 0)
         {
+            int first = slice_selector.first;
+            int second = slice_selector.second;
+            assert(second >= first);
             std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
-            assert(slice_selector < slice_dims.size());    
-            out_dims.push_back(slice_elements[slice_selector]);
+            int total_elements = 0;
+            assert(second < slice_dims.size());
+            
+            for (int i = first; i <= second; i++)
+                total_elements += slice_elements[i];
+            assert(total_elements > 0);
+            out_dims.push_back(total_elements);
         }
         else
         {                           
@@ -1474,13 +1481,15 @@ struct split
 
     unsigned compute_offset(shape input_shape) const
     {
-        assert(slice_selector >= 0);
+        int first = slice_selector.first;
+        if (first <= 0)
+            return 0;
         unsigned offset = 0;
         std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
         int slice_ndx = 0;
         for (auto&& ele : slice_elements)
         {
-            if (slice_ndx == slice_selector)
+            if (slice_ndx == first)
                 break;
             offset += ele;
             slice_ndx++;
@@ -1491,17 +1500,15 @@ struct split
     argument compute(shape output_shape, std::vector<argument> args) const
     {
         auto arg0 = args[0];
-        if((axis == 0) && (slice_selector == -1))
+        int first = slice_selector.first;
+        if((axis == 0) && (first == -1))
             return {std::move(output_shape), std::move(arg0.data)};
 
         shape input_shape = arg0.get_shape();
         std::vector<int> index_map = compute_index_map(input_shape);
         argument result{output_shape};
         std::size_t nelements = output_shape.elements();
-        unsigned offset = 0;
-        if (slice_selector >= 0)
-            offset = compute_offset(input_shape);
-
+        unsigned offset = compute_offset(input_shape);
         visit_all(result, arg0)([&](auto output, auto input) {
             auto slice = make_view(output_shape, output.data());
             for(std::size_t i = 0; i < nelements; i++)

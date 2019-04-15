@@ -3038,8 +3038,8 @@ struct test_split_selector : verify_program<test_split_selector>
         migraphx::shape s{migraphx::shape::int32_type, {3, 3, 3}};
         migraphx::shape s2{migraphx::shape::int32_type, {27}};
         auto x      = p.add_parameter("x", s);
-        auto split0 = p.add_instruction(migraphx::op::split{0, {1, 1, 1}, 0}, x);
-        auto split1 = p.add_instruction(migraphx::op::split{0, {1, 1, 1}, 1}, x);
+        auto split0 = p.add_instruction(migraphx::op::split{0, {1, 1, 1}, {0, 0}}, x);
+        auto split1 = p.add_instruction(migraphx::op::split{0, {1, 1, 1}, {1, 1}}, x);
         p.add_instruction(migraphx::op::add{}, split1, split0);
         return p;
     }
@@ -3053,8 +3053,8 @@ struct test_split_selector_2 : verify_program<test_split_selector_2>
         migraphx::shape s{migraphx::shape::int32_type, {3, 3, 3}};
         migraphx::shape s2{migraphx::shape::int32_type, {27}};
         auto x      = p.add_parameter("x", s);
-        auto split0 = p.add_instruction(migraphx::op::split{1, {1, 1, 1}, 1}, x);
-        auto split1 = p.add_instruction(migraphx::op::split{1, {1, 1, 1}, 2}, x);
+        auto split0 = p.add_instruction(migraphx::op::split{1, {1, 1, 1}, {1, 1}}, x);
+        auto split1 = p.add_instruction(migraphx::op::split{1, {1, 1, 1}, {2, 2}}, x);
         p.add_instruction(migraphx::op::add{}, split1, split0);
         return p;
     }

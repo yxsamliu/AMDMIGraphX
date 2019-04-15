@@ -254,7 +254,7 @@ struct miopen_apply
             const shape& out_s = ins->get_shape();
             std::vector<instruction_ref> refs = ins->inputs();
             
-            if ((op.axis == 0) && (op.slice_selector < 0))
+            if ((op.axis == 0) && (op.slice_selector.first < 0))
             {
                 std::vector<int64_t> dims;
                 for (auto && dim : out_s.lens())

@@ -20,7 +20,7 @@ argument hip_split::compute(context& ctx,
 {
     auto arg0 = args[0];
     unsigned offset = 0;
-    if (op.slice_selector >= 0)
+    if (op.slice_selector.first >= 0)
         offset = op.compute_offset(args.at(0).get_shape());
     return device::split(ctx.get_stream().get(), output_shape, args, offset);
 }

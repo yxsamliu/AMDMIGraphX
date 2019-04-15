@@ -573,12 +573,12 @@ void horizontal_fusion_impl::transform()
                 outputs.push_back(output);    
 
             instruction_ref insert_before = std::next(last_ins);
-            auto split_ins = p_program->insert_instruction(insert_before, op::split{axis, slice_dims}, last_ins);
+            auto split_ins = p_program->insert_instruction(insert_before, op::split{axis, slice_dims, {0, slice_dims.size() - 1}}, last_ins);
             unsigned offset = 0;
             shape s = last_ins->get_shape();
             std::vector<std::vector<std::size_t>> dims = orig_dims[last_ins];
             std::vector<unsigned> offsets;
-
+            
             for (auto && dim : dims)
             {
                 offsets.push_back(offset);
