@@ -1396,14 +1396,30 @@ struct split
             int first = slice_selector.first;
             int second = slice_selector.second;
             assert(second >= first);
-            std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
-            int total_elements = 0;
-            assert(second < slice_dims.size());
+            if (first == second)
+            {
+                int axis_id = 0;
+                int slice_dim = slice_dims[first];
+                for (auto&& len : input_shape.lens())
+                {
+                    if (axis_id == axis)
+                        out_dims.push_back(slice_dim);
+                    else
+                        out_dims.push_back(len);
+                    axis_id++;
+                }
+            }
+            else
+            {                
+                std::vector<unsigned> slice_elements = compute_slice_elements(input_shape);
+                int total_elements = 0;
+                assert(second < slice_dims.size());
             
-            for (int i = first; i <= second; i++)
-                total_elements += slice_elements[i];
-            assert(total_elements > 0);
-            out_dims.push_back(total_elements);
+                for (int i = first; i <= second; i++)
+                    total_elements += slice_elements[i];
+                assert(total_elements > 0);
+                out_dims.push_back(total_elements);
+            }
         }
         else
         {                           

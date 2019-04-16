@@ -640,16 +640,8 @@ void horizontal_fusion_impl::transform()
                         add_load = (new_ins != split_ins) ? false : true;
                     }
                     if (add_load)
-                    {
                         new_ins = p_program->insert_instruction(insert_before, op::load{orig_s, offsets[enum_ndx]}, split_ins);
-                    }
-                    else
-                    {
-                        std::vector<int64_t> new_dims;
-                        for (auto&& dim : dims[enum_ndx])
-                            new_dims.push_back(dim);
-                        new_ins = p_program->insert_instruction(insert_before, op::reshape{new_dims}, new_ins);
-                    }
+
                     enum2_instr[enum_ndx] = new_ins;
                 }
                 else
@@ -658,7 +650,6 @@ void horizontal_fusion_impl::transform()
                 }
                 instruction::replace_argument(output, last_ins, new_ins, false);
             }
-
         }
     }
 }
