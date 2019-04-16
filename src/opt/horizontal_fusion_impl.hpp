@@ -148,10 +148,12 @@ struct horizontal_fusion_impl
     int find_unique_axis(instruction_ref, instruction_ref);
     bool match_dim(instruction_ref, instruction_ref, int axis);
     bool is_conv(instruction_ref);
+    bool is_concat(instruction_ref);
     void remove_redundant_roots(std::vector<instruction_ref>&);
     void update_hash_tree(unsigned id);
     int get_channel_axis() { return 1; }
     int get_conv_output_axis() { return 0; }
+    instruction_ref break_split(int, instruction_ref);
     
 #ifdef MIGRAPHX_DEBUG_H_FUSION
     void dump_program();

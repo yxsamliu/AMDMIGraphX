@@ -101,6 +101,12 @@ bool horizontal_fusion_impl::is_conv(instruction_ref ins)
     return (op_flag[ins->name()] == 1);
 }
 
+bool horizontal_fusion_impl::is_concat(instruction_ref ins)
+{
+    return (ins->name() == "concat");
+}
+           
+
 // Hash given instruction.           
 hash_value_ptr horizontal_fusion_impl::hash(instruction_ref ins)
 {
@@ -412,7 +418,34 @@ void horizontal_fusion_impl::update_hash_tree(unsigned hash_id)
     hash_instrs[hash_id].clear();
     hash_instrs[hash_id].insert(first);
 }
-                                                       
+
+instruction_ref horizontal_fusion_impl::break_split(int enum_ndx, instruction_ref split_ins)
+{
+    const operation& op = split_ins->get_operator();
+    int first = (any_cast<op::split>(op)).slice_selector.first;
+    int second = (any_cast<op::split>(op)).slice_selector.second;
+    assert((first >= 0) && (second >= first));
+    assert((enum_ndx == first) || (enum_ndx == second));
+    if (first == second)
+        return split_ins;
+    int axis = (any_cast<op::split>(op)).axis;
+    std::vector<int> slice_dims = (any_cast<op::split>(op)).slice_dims;
+    instruction_ref input = split_ins->inputs().at(0);
+    instruction_ref new_split = p_program->insert_instruction(split_ins, op::split{axis, slice_dims, {enum_ndx, enum_ndx}}, input);
+    operation& op_edit = split_ins->get_operator_edit();
+    
+    if (first == enum_ndx)
+        (any_cast<op::split>(op_edit)).slice_selector.first = enum_ndx + 1;
+    else
+        (any_cast<op::split>(op_edit)).slice_selector.second = enum_ndx - 1;
+
+    std::vector<shape> shapes;
+    shapes.push_back(input->get_shape());
+    shape new_shape = (any_cast<op::split>(op_edit)).compute_shape(shapes);
+    split_ins->set_shape(new_shape);
+    return new_split;
+}
+               
 void horizontal_fusion_impl::transform()
 {
     for (auto && val : values)
@@ -569,8 +602,13 @@ void horizontal_fusion_impl::transform()
                 slice_dims.push_back(dims.at(axis));
 
             std::vector<instruction_ref> outputs;
+            std::unordered_map<int, bool> enum2_concat;
             for (auto&& output : last_ins->outputs())
-                outputs.push_back(output);    
+            {                
+                outputs.push_back(output);
+                if (is_concat(output))
+                    enum2_concat[enum_in_cluster[output]] = true;
+            }
 
             instruction_ref insert_before = std::next(last_ins);
             auto split_ins = p_program->insert_instruction(insert_before, op::split{axis, slice_dims, {0, slice_dims.size() - 1}}, last_ins);
@@ -585,24 +623,40 @@ void horizontal_fusion_impl::transform()
                 shape orig_s = shape{s.type(), dim};
                 offset += orig_s.bytes();
             }
-            std::unordered_map<int, instruction_ref> enum2_load;
+            std::unordered_map<int, instruction_ref> enum2_instr;
+
             for (auto&& output : outputs)
             {
                 assert(enum_in_cluster.find(output) != enum_in_cluster.end());
                 int enum_ndx = enum_in_cluster[output];
                 shape orig_s = shape{s.type(), dims[enum_ndx]};
-                offset = offsets[enum_ndx];
-                instruction_ref load_ins;
-                if (enum2_load.find(enum_ndx) == enum2_load.end())
+                instruction_ref new_ins;
+                if (enum2_instr.find(enum_ndx) == enum2_instr.end())
                 {
-                    load_ins = p_program->insert_instruction(insert_before, op::load{orig_s, offset}, split_ins);
-                    enum2_load[enum_ndx] = load_ins;
+                    bool add_load = true;
+                    if (enum2_concat.find(enum_ndx) != enum2_concat.end())
+                    {
+                        new_ins = break_split(enum_ndx, split_ins);
+                        add_load = (new_ins != split_ins) ? false : true;
+                    }
+                    if (add_load)
+                    {
+                        new_ins = p_program->insert_instruction(insert_before, op::load{orig_s, offsets[enum_ndx]}, split_ins);
+                    }
+                    else
+                    {
+                        std::vector<int64_t> new_dims;
+                        for (auto&& dim : dims[enum_ndx])
+                            new_dims.push_back(dim);
+                        new_ins = p_program->insert_instruction(insert_before, op::reshape{new_dims}, new_ins);
+                    }
+                    enum2_instr[enum_ndx] = new_ins;
                 }
                 else
                 {
-                    load_ins = enum2_load[enum_ndx];
+                    new_ins = enum2_instr[enum_ndx];
                 }
-                instruction::replace_argument(output, last_ins, load_ins, false);
+                instruction::replace_argument(output, last_ins, new_ins, false);
             }
 
         }
@@ -653,9 +707,8 @@ void horizontal_fusion_impl::run()
         ins->id = cur_point;
         cur_point++;
     }
-    dump_hash_tree();
+    //    dump_hash_tree();
     transform();
-    std::cout << *p_program << std::endl;
 }
 
 #ifdef MIGRAPHX_DEBUG_H_FUSION
