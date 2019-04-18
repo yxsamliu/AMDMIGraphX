@@ -10,7 +10,6 @@ namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
 void eliminate_concat::apply(program& p) const
 {
-    //    std::cout << p << std::endl;
     for(auto ins : iterator_for(p))
     {
         // Look for the concat operator

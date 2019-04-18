@@ -6,7 +6,7 @@
 #include <set>
 #include <stack>
 
-#define MIGRAPHX_DEBUG_H_FUSION
+//#define MIGRAPHX_DEBUG_H_FUSION
 
 namespace migraphx {
 

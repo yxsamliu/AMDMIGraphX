@@ -698,7 +698,7 @@ void horizontal_fusion_impl::run()
         ins->id = cur_point;
         cur_point++;
     }
-    //    dump_hash_tree();
+    MIGRAPHX_DEBUG(dump_hash_tree());
     transform();
 }
 
