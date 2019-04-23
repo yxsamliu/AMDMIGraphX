@@ -72,7 +72,7 @@ struct literal : raw_data<literal>
         return {m_shape, [b]() mutable { return b.data(); }};
     }
 
-public:
+private:
     std::shared_ptr<char> buffer;
     shape m_shape;
 

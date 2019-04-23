@@ -18,7 +18,6 @@ void auto_contiguous::apply(program& p) const
             p.replace_instruction(ins, c);
         }
     }
-    std::cout << p << std::endl;
 }
 
 } // namespace MIGRAPHX_INLINE_NS
