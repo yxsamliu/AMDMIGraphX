@@ -3346,7 +3346,7 @@ struct test_fp32_fp16_lall : verify_program<test_fp32_fp16_lall>
         std::vector<float> data(2 * 3);
         std::iota(data.begin(), data.end(), 1.0f);
         auto l1 = p.add_literal(migraphx::literal(s, data));
-        auto l2 = p.add_literal(migraphx::literal(s, data));
+        auto l2 = p.add_parameter("p2", s);
         p.add_instruction(migraphx::op::add{}, l1, l2);
         migraphx::quantize(p, {"all"});
         return p;
@@ -3362,9 +3362,9 @@ struct test_fp32_fp16_ladd : verify_program<test_fp32_fp16_ladd>
         std::vector<float> data(2 * 3);
         std::iota(data.begin(), data.end(), 1.0f);
         auto l1 = p.add_literal(migraphx::literal(s, data));
-        auto l2 = p.add_literal(migraphx::literal(s, data));
+        auto l2 = p.add_parameter("p2", s);
         p.add_instruction(migraphx::op::add{}, l1, l2);
-        migraphx::quantize(p, {"all"});
+        migraphx::quantize(p, {"add"});
         return p;
     };
 };
