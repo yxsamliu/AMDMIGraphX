@@ -593,13 +593,15 @@ struct cpu_unary
     std::string name() const { return op.name(); }
     shape compute_shape(const std::vector<shape>& inputs) const
     {
-        if(inputs.at(0).packed())
+        check_shapes{inputs}.has(1);
+        auto s = inputs.at(0);
+        if(s.packed())
         {
-            return inputs.at(0);
+            return s;
         }
         else
         {
-            return {inputs.at(0).type(), inputs.at(0).lens()};
+            return {s.type(), s.lens()};
         }
     }
 
@@ -608,7 +610,7 @@ struct cpu_unary
         argument result{output_shape};
         result.visit([&](auto output) {
             args[0].visit([&](auto input) {
-                if(input.get_shape().packed())
+                if(input.get_shape().standard())
                 {
                     std::transform(input.begin(), input.end(), output.begin(), op.fcn());
                 }
@@ -805,13 +807,16 @@ struct cpu_binary
     std::string name() const { return "cpu::" + op.name(); }
     shape compute_shape(const std::vector<shape>& inputs) const
     {
-        if(inputs.at(0) == inputs.at(1) and inputs.at(0).packed())
+        check_shapes{inputs}.has(2).same_type().same_dims();
+        auto s0 = inputs.at(0);
+        auto s1 = inputs.at(1);
+        if(s0 == s1 and s0.packed())
         {
-            return inputs.at(0);
+            return s0;
         }
         else
         {
-            return {inputs.at(0).type(), inputs.at(0).lens()};
+            return {s0.type(), s0.lens()};
         }
     }
 
@@ -821,7 +826,7 @@ struct cpu_binary
         visit_all(result, args[0], args[1])([&](auto output, auto input1, auto input2) {
             auto s1 = input1.get_shape();
             auto s2 = input2.get_shape();
-            if(s1 == s2 and s1.packed())
+            if(s1 == s2 and s1.standard())
             {
                 std::transform(
                     input1.begin(), input1.end(), input2.begin(), output.begin(), op.fcn());

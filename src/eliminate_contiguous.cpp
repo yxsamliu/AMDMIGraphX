@@ -20,14 +20,19 @@ static bool try_compute_shape(instruction_ref ins, const std::vector<shape>& inp
             return true;
         }
 
-        auto outputs = ins->outputs();
-        // If the current instruction has no output, it means it is the last
-        // instruction and generates a non-standard output. But for unary
-        // and binary operators, we can still remove it and reshape the output
-        // to be standard since these operator can handle non-standard inputs
-        if(outputs.empty())
+        // if no changes for the shape, the contiguous can also be removed
+        if(new_shape == ins->get_shape())
         {
             return true;
+        }
+
+        auto outputs = ins->outputs();
+        // If the current instruction has no output, it means it is the last
+        // instruction and generates a non-standard output shape, and the last
+        // output shape is different from the case with the contiguous operator
+        if(outputs.empty())
+        {
+            return false;
         }
 
         for(auto output : outputs)
