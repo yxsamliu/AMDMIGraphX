@@ -49,13 +49,16 @@ inline tensor_descriptor make_tensor(const migraphx::shape& s)
         d = miopenFloat;
     else if(s.type() == shape::half_type)
         d = miopenHalf;
+    else if(s.type() == shape::int8_type)
+        d = miopenInt8;
     else
         MIGRAPHX_THROW("Unsupported type");
     miopenSetTensorDescriptor(t.get(), d, s.lens().size(), lens.data(), strides.data());
     return t;
 }
 
-inline convolution_descriptor make_conv(const migraphx::op::convolution& op)
+template <class T>
+inline convolution_descriptor make_conv(const T& op)
 {
     auto c = make_obj<convolution_descriptor>(&miopenCreateConvolutionDescriptor);
     miopenConvolutionMode_t c_mode = miopenConvolution;
