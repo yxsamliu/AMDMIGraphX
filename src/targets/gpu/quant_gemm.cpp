@@ -1,6 +1,7 @@
 #include <migraphx/gpu/quant_gemm.hpp>
 #include <migraphx/gpu/device/pack.hpp>
 #include <migraphx/gpu/context.hpp>
+#include <migraphx/generate.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -54,16 +55,7 @@ rb_type<T>* to_rocblas_type(T* x)
 shape miopen_quant_gemm::compute_shape(const std::vector<shape>& inputs) const
 {
     std::vector<shape> input_shapes(inputs);
-    if(!inputs.at(1).transposed())
-    {
-        input_shapes.pop_back();
-    }
-    if(inputs.at(0).transposed())
-    {
-        input_shapes.pop_back();
-    }
     input_shapes.pop_back();
-
     check_shapes{input_shapes}.not_broadcasted();
     return op.compute_shape(input_shapes);
 }
@@ -72,7 +64,6 @@ argument miopen_quant_gemm::compute(context& ctx,
                                     const shape& output_shape,
                                     const std::vector<argument>& args) const
 {
-    // handling the packing of B MUST be before handling that for A
     bool transa     = args[0].get_shape().transposed();
     bool transb     = args[1].get_shape().transposed();
     auto n_dim      = output_shape.lens().size();
@@ -82,26 +73,27 @@ argument miopen_quant_gemm::compute(context& ctx,
     rocblas_int ldb = args[1].get_shape().strides()[transb ? dim_1 : dim_0];
     rocblas_int ldc = args[2].get_shape().strides()[dim_0];
 
-    size_t addi_ref_num = 0;
     if(!transb)
     {
-        ++addi_ref_num;
-        const argument& arg_b = args[args.size() - 1];
-        // argument for B is the last one in the input argument vector
-        // use the algorithm to pack A
-        device::pack_a(ctx.get_stream().get(), args[1], arg_b);
+        if(arg_b.empty())
+        {
+            arg_b = allocate_gpu(args[1].get_shape());
+        }
+        device::pack_a(ctx.get_stream().get(), arg_b, args[1]);
     }
 
     // need to pack A in this scenario, use the algorithm to pack B in the
     // comment of the API
     if(transa)
     {
-        ++addi_ref_num;
-        const argument& arg_a = args[args.size() - 1 - addi_ref_num];
-        device::pack_b(ctx.get_stream().get(), args[0], arg_a);
+        if(arg_a.empty())
+        {
+            arg_a = allocate_gpu(args.at(0).get_shape());
+        }
+        device::pack_b(ctx.get_stream().get(), arg_a, args[0]);
     }
 
-    bool is_3inputs = (args.size() - addi_ref_num == 4);
+    bool is_3inputs = (args.size() == 4);
     int8_t beta     = 0;
     if(is_3inputs)
     {
@@ -135,17 +127,17 @@ argument miopen_quant_gemm::compute(context& ctx,
                                     m,
                                     k,
                                     &alpha_r,
-                                    to_pointer(args[1]),
+                                    (!transb) ? to_pointer(arg_b) : to_pointer(args.at(1)),
                                     rocblas_datatype_i8_r,
                                     ldb,
-                                    to_pointer(args[0]),
+                                    transa ? to_pointer(arg_a) : to_pointer(args.at(0)),
                                     rocblas_datatype_i8_r,
                                     lda,
                                     &beta_r,
                                     to_pointer(args[2]),
                                     rocblas_datatype_i32_r,
                                     ldc,
-                                    (is_3inputs ? to_pointer(args[3]) : to_pointer(args[2])),
+                                    is_3inputs ? to_pointer(args.at(3)) : to_pointer(args[2]),
                                     rocblas_datatype_i32_r,
                                     ldc,
                                     rocblas_datatype_i32_r,
@@ -165,11 +157,11 @@ argument miopen_quant_gemm::compute(context& ctx,
                 m,
                 k,
                 &alpha_r,
-                to_pointer(args[1]),
+                (!transb) ? to_pointer(arg_b) : to_pointer(args.at(1)),
                 rocblas_datatype_i8_r,
                 ldb,
                 k * n,
-                to_pointer(args[0]),
+                transa ? to_pointer(arg_a) : to_pointer(args.at(0)),
                 rocblas_datatype_i8_r,
                 lda,
                 m * k,
@@ -178,7 +170,7 @@ argument miopen_quant_gemm::compute(context& ctx,
                 rocblas_datatype_i32_r,
                 ldc,
                 m * n,
-                (is_3inputs ? to_pointer(args[3]) : to_pointer(args[2])),
+                is_3inputs ? to_pointer(args.at(3)) : to_pointer(args[2]),
                 rocblas_datatype_i32_r,
                 ldc,
                 m * n,
@@ -192,7 +184,7 @@ argument miopen_quant_gemm::compute(context& ctx,
         }
     });
 
-    return (is_3inputs ? args[3] : args[2]);
+    return is_3inputs ? args.at(3) : args[2];
 }
 
 } // namespace gpu
