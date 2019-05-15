@@ -15,6 +15,8 @@ struct program;
 void quantize(program& prog, const std::vector<std::string>& ins_names);
 void quantize(program& prog);
 
+void quantize_int8(program& prog, const std::vector<std::string>& ins_names);
+
 } // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
 
