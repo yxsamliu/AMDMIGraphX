@@ -29,7 +29,7 @@ instruction_ref insert_quant_ins(program& prog,
         return map_ins[ins];
     }
 
-    if (ins->name() == "undefined")
+    if(ins->name() == "undefined")
     {
         return ins;
     }
