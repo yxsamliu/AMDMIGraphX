@@ -29,6 +29,11 @@ instruction_ref insert_quant_ins(program& prog,
         return map_ins[ins];
     }
 
+    if (ins->name() == "undefined")
+    {
+        return ins;
+    }
+
     assert(ins->get_shape().type() == shape::float_type ||
            ins->get_shape().type() == shape::double_type ||
            ins->get_shape().type() == shape::int32_type);
