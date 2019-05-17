@@ -337,7 +337,9 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
             auto group         = conv_op.group;
             auto adjust_factor = 1.0 / (int8_param[0].first * int8_param[1].first);
 
-            shape quant_shape = compute_shape(op::quant_convolution{padding, stride, dilation, padding_mode, group}, converted_inputs);
+            shape quant_shape =
+                compute_shape(op::quant_convolution{padding, stride, dilation, padding_mode, group},
+                              converted_inputs);
             std::vector<float> vec_factor(quant_shape.elements(), adjust_factor);
             auto fl = prog.add_literal(literal{{orig_type, quant_shape.lens()}, vec_factor});
             if(quant_shape.type() == orig_type)
