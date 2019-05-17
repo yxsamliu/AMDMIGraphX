@@ -389,7 +389,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
 void capture_args(std::size_t ins_index, std::vector<argument> args)
 {
     std::vector<float> vec_val;
-    args.front().visit([&](auto output) {vec_val.assign(output.begin(), output.end()); });
+    args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
     auto max_val = *std::max_element(vec_val.begin(), vec_val.end());
     auto min_val = *std::min_element(vec_val.begin(), vec_val.end());
     std::cout << "max_val = " << max_val << ", min_val = " << min_val << std::endl;
