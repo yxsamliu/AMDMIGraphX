@@ -38,21 +38,21 @@ struct convert : unary<convert>
 
     auto apply() const
     {
-        return [&](auto x) { 
-            float res = scale * x + shift; 
-            if (target_type == shape::int8_type)
+        return [&](auto x) {
+            float res = scale * x + shift;
+            if(target_type == shape::int8_type)
             {
-                if (res > 127)
+                if(res > 127)
                 {
                     res = 127;
                 }
 
-                if (res < -128)
+                if(res < -128)
                 {
                     res = -128;
                 }
             }
-            
+
             return res;
         };
     }
