@@ -38,7 +38,23 @@ struct convert : unary<convert>
 
     auto apply() const
     {
-        return [&](auto x) { return scale * x + shift; };
+        return [&](auto x) { 
+            float res = scale * x + shift; 
+            if (target_type == shape::int8_type)
+            {
+                if (res > 127)
+                {
+                    res = 127;
+                }
+
+                if (res < -128)
+                {
+                    res = -128;
+                }
+            }
+            
+            return res;
+        };
     }
 
     convert(shape::type_t t) : target_type{t} {}
