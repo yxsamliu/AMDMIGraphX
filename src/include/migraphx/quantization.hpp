@@ -17,6 +17,10 @@ void quantize(program& prog);
 
 void quantize_int8(program& prog, const std::vector<std::string>& ins_names);
 
+// insert the capture operator for the inputs of each operator to be quantized
+// to int8
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names);
+
 } // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
 

@@ -10,6 +10,7 @@
 #include <migraphx/op/convolution.hpp>
 #include <migraphx/op/quant_convolution.hpp>
 #include <migraphx/op/multibroadcast.hpp>
+#include <migraphx/op/capture.hpp>
 #include <migraphx/stringutils.hpp>
 #include <migraphx/ranges.hpp>
 #include <utility>
@@ -381,6 +382,73 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
         {
             MIGRAPHX_THROW("INT8_QUANTIZE: does not support operator" + ins->name());
         }
+    }
+}
+
+// std::vector<std::pair<float, float>> ins_args;
+void capture_args(std::size_t ins_index, std::vector<argument> args)
+{
+    std::vector<float> vec_val;
+    args.front().visit([&](auto output) {vec_val.assign(output.begin(), output.end()); });
+    auto max_val = *std::max_element(vec_val.begin(), vec_val.end());
+    auto min_val = *std::min_element(vec_val.begin(), vec_val.end());
+    std::cout << "max_val = " << max_val << ", min_val = " << min_val << std::endl;
+
+    // if(ins_index == ins_args.size())
+    // {
+    //     ins_args.push_back(std::vector<argument>{});
+    // }
+    // ins_args[ins_index].push_back(args.front());
+
+    return;
+}
+
+void calc_quant_params(std::vector<std::vector<argument>>& ins_arg,
+                       std::vector<std::pair<float, float>>& ins_params)
+{
+    return;
+}
+
+// For the input of each input argument, we need to insert a
+// capture operator to compute the scale and shift
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
+{
+    // the int8 quantization only support dot and convolution
+    std::vector<std::string> op_names = {"dot", "convolution"};
+    if(!std::all_of(ins_names.begin(), ins_names.end(), [&](auto name) {
+           return std::find(op_names.begin(), op_names.end(), name) != op_names.end();
+       }))
+    {
+        MIGRAPHX_THROW("CAPTURE_ARGUMENTS: input operator is not supported");
+    }
+
+    std::unordered_map<instruction_ref, instruction_ref> ins_map;
+    std::size_t index = 0;
+    for(auto ins : iterator_for(prog))
+    {
+        if(not contains(ins_names, ins->name()))
+        {
+            continue;
+        }
+
+        auto inputs = ins->inputs();
+        std::vector<instruction_ref> new_args;
+        for(auto input : inputs)
+        {
+            instruction_ref new_ins{};
+            if(ins_map.count(input) > 0)
+            {
+                new_ins = ins_map[input];
+            }
+            else
+            {
+                new_ins = prog.insert_instruction(
+                    std::next(input), op::capture{index++, capture_args}, input);
+                ins_map[input] = new_ins;
+            }
+            new_args.push_back(new_ins);
+        }
+        instruction::replace(ins, ins->get_operator(), ins->get_shape(), new_args);
     }
 }
 
