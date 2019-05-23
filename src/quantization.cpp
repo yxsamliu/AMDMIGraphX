@@ -116,12 +116,43 @@ void quantize(program& prog, const std::vector<std::string>& ins_names)
 
 void quantize(program& prog) { quantize(prog, {"all"}); }
 
+
+
 // int8 quantization is different from fp16 since int8 can only handle value
 // -128 ~ 127. To convert the float or double to int8, we need a scale and
 // a shift, then the convert can be done as v_int8 = fp * scale + shift.
 // To simplify the changes, we consider shift as 0.0f for now.
-void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
+void quantize_int8(program& prog, const std::vector<std::string>& ins_names, 
+                   std::vector<std::pair<float, float>>& int8_quant_params)
 {
+    // // For debugging
+    // auto print_gemm_res = [&](std::size_t ins_index, std::vector<migraphx::argument> args) {
+    //     // scale and shift is need for only int8 type, and we do not
+    //     // consider shift, so set shift to 0
+    //     std::vector<float> vec_val;
+    //     args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
+    //     std::cout << "quant_gemm = " << std::endl;
+    //     for (size_t i = 0; i < 20; i++)
+    //     {
+    //         std::cout << vec_val[i] << "\t";
+    //     }
+    //     std::cout << std::endl;
+    // };
+
+    // // For debugging
+    // auto print_conv_res = [&](std::size_t ins_index, std::vector<migraphx::argument> args) {
+    //     // scale and shift is need for only int8 type, and we do not
+    //     // consider shift, so set shift to 0
+    //     std::vector<float> vec_val;
+    //     args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
+    //     std::cout << "quant_conv = " << std::endl;
+    //     for (size_t i = 0; i < 20; i++)
+    //     {
+    //         std::cout << vec_val[i] << "\t";
+    //     }
+    //     std::cout << std::endl;
+    // };
+
     // For now, we only support the int8 quantization of gemm and convolution
     std::vector<std::string> op_names = {"dot", "convolution"};
     if(!std::all_of(ins_names.begin(), ins_names.end(), [&](auto name) {
@@ -131,9 +162,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
         MIGRAPHX_THROW("QUANTIZE_INT8: only support DOT and CONVOLUTION operation");
     }
 
-    // tmp value used just testing
-    std::vector<std::pair<float, float>> int8_param{{127.0f, 0.0f}, {127.0f, 0.0f}, {128.0f, 0.0f}};
-
+    std::size_t quant_param_index = 0;
     std::unordered_map<instruction_ref, instruction_ref> map_quant_ins;
     for(auto ins : iterator_for(prog))
     {
@@ -152,14 +181,15 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
         // to a int8 type by adding a convert operator and replace
         // the operator with the corresponding int8 version
         auto inputs             = ins->inputs();
-        std::size_t param_index = 0;
+        std::vector<std::pair<float, float>> ins_quant_params;
         for(auto input : inputs)
         {
             // In general, the target_type is int8, but for the dot
             // operation, if it has 3 inputs, then the last one should
             // be converted to int32_type
             shape::type_t quant_type = shape::int8_type;
-            auto param               = int8_param[param_index++];
+            auto param               = int8_quant_params[quant_param_index++];
+            ins_quant_params.push_back(param);
             if(ins->name() == "dot" and inputs.size() == 3 and input == inputs.back())
             {
                 quant_type = shape::int32_type;
@@ -212,7 +242,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
         if(ins->name() == "dot")
         {
             auto dot_op     = any_cast<op::dot>(ins->get_operator());
-            float new_alpha = dot_op.alpha / (int8_param[0].first * int8_param[1].first);
+            float new_alpha = dot_op.alpha / (ins_quant_params[0].first * ins_quant_params[1].first);
             float new_beta  = dot_op.beta;
             // We need additional checking about the quant_alpha value. If
             // abs(quant_alpha) > 50 (some tmp value set here), we can convert
@@ -322,6 +352,8 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
                         auto beta_c =
                             prog.insert_instruction(ins, op::mul{}, l_beta, inputs.back());
                         prog.replace_instruction(ins, op::add{}, alpha_ab, beta_c);
+                        // auto gemm_res = prog.insert_instruction(ins, op::add{}, alpha_ab, beta_c);
+                        // prog.replace_instruction(ins, op::capture{0, print_gemm_res}, gemm_res);
                     }
                 }
             }
@@ -336,7 +368,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
             auto dilation      = conv_op.dilation;
             auto padding_mode  = conv_op.padding_mode;
             auto group         = conv_op.group;
-            auto adjust_factor = 1.0 / (int8_param[0].first * int8_param[1].first);
+            auto adjust_factor = 1.0 / (ins_quant_params[0].first * ins_quant_params[1].first);
 
             shape quant_shape =
                 compute_shape(op::quant_convolution{padding, stride, dilation, padding_mode, group},
@@ -359,6 +391,8 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
                         op::quant_convolution{padding, stride, dilation, padding_mode, group},
                         converted_inputs);
                     prog.replace_instruction(ins, op::mul{}, quant_conv, fl);
+                    // auto q_conv = prog.insert_instruction(ins, op::mul{}, quant_conv, fl);
+                    // prog.replace_instruction(ins, op::capture{0, print_conv_res}, q_conv);
                 }
             }
             else
@@ -385,36 +419,15 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
     }
 }
 
-// std::vector<std::pair<float, float>> ins_args;
-void capture_args(std::size_t ins_index, std::vector<argument> args)
-{
-    std::vector<float> vec_val;
-    args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
-    auto max_val = *std::max_element(vec_val.begin(), vec_val.end());
-    auto min_val = *std::min_element(vec_val.begin(), vec_val.end());
-    std::cout << "max_val = " << max_val << ", min_val = " << min_val << std::endl;
-
-    // if(ins_index == ins_args.size())
-    // {
-    //     ins_args.push_back(std::vector<argument>{});
-    // }
-    // ins_args[ins_index].push_back(args.front());
-
-    return;
-}
-
-void calc_quant_params(std::vector<std::vector<argument>>& ins_arg,
-                       std::vector<std::pair<float, float>>& ins_params)
-{
-    return;
-}
-
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
-void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names, 
+                       std::size_t& num_quant_params, 
+                       std::function<void(std::size_t, std::vector<argument>args)> func)
 {
+    num_quant_params = 0;
     // the int8 quantization only support dot and convolution
-    std::vector<std::string> op_names = {"dot", "convolution"};
+    std::vector<std::string> op_names = {"dot", "convolution", "quant_dot", "quant_convolution"};
     if(!std::all_of(ins_names.begin(), ins_names.end(), [&](auto name) {
            return std::find(op_names.begin(), op_names.end(), name) != op_names.end();
        }))
@@ -423,7 +436,6 @@ void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
     }
 
     std::unordered_map<instruction_ref, instruction_ref> ins_map;
-    std::size_t index = 0;
     for(auto ins : iterator_for(prog))
     {
         if(not contains(ins_names, ins->name()))
@@ -443,7 +455,7 @@ void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
             else
             {
                 new_ins = prog.insert_instruction(
-                    std::next(input), op::capture{index++, capture_args}, input);
+                    std::next(input), op::capture{num_quant_params++, func}, input);
                 ins_map[input] = new_ins;
             }
             new_args.push_back(new_ins);
