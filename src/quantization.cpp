@@ -7,10 +7,10 @@
 #include <migraphx/op/mul.hpp>
 #include <migraphx/op/add.hpp>
 #include <migraphx/op/quant_dot.hpp>
+#include <migraphx/op/capture.hpp>
 #include <migraphx/op/convolution.hpp>
 #include <migraphx/op/quant_convolution.hpp>
 #include <migraphx/op/multibroadcast.hpp>
-#include <migraphx/op/capture.hpp>
 #include <migraphx/stringutils.hpp>
 #include <migraphx/ranges.hpp>
 #include <utility>
