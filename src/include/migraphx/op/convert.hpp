@@ -42,14 +42,14 @@ struct convert : unary<convert>
             float res = scale * x + shift;
             if(target_type == shape::int8_type)
             {
-                if (res > 127.0 or res < -128.0)
+                if(res > 127.0 or res < -128.0)
                 {
                     std::cout << "res = " << res << std::endl;
                 }
                 int factor = (res > 0) ? 1 : -1;
-                res = res + factor * 0.5f;
-                res = res > 127.0 ? 127.0 : res;
-                res = res < -128.0 ? -128.0 : res;
+                res        = res + factor * 0.5f;
+                res        = res > 127.0 ? 127.0 : res;
+                res        = res < -128.0 ? -128.0 : res;
             }
 
             return res;

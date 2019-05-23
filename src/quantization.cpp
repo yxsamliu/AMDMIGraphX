@@ -116,13 +116,12 @@ void quantize(program& prog, const std::vector<std::string>& ins_names)
 
 void quantize(program& prog) { quantize(prog, {"all"}); }
 
-
-
 // int8 quantization is different from fp16 since int8 can only handle value
 // -128 ~ 127. To convert the float or double to int8, we need a scale and
 // a shift, then the convert can be done as v_int8 = fp * scale + shift.
 // To simplify the changes, we consider shift as 0.0f for now.
-void quantize_int8(program& prog, const std::vector<std::string>& ins_names, 
+void quantize_int8(program& prog,
+                   const std::vector<std::string>& ins_names,
                    std::vector<std::pair<float, float>>& int8_quant_params)
 {
     // // For debugging
@@ -180,7 +179,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
         // process all inputs, if input is a fp32 or fp64, convert it
         // to a int8 type by adding a convert operator and replace
         // the operator with the corresponding int8 version
-        auto inputs             = ins->inputs();
+        auto inputs = ins->inputs();
         std::vector<std::pair<float, float>> ins_quant_params;
         for(auto input : inputs)
         {
@@ -241,9 +240,10 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
         // equal)", we need additional calculation for the adjustment
         if(ins->name() == "dot")
         {
-            auto dot_op     = any_cast<op::dot>(ins->get_operator());
-            float new_alpha = dot_op.alpha / (ins_quant_params[0].first * ins_quant_params[1].first);
-            float new_beta  = dot_op.beta;
+            auto dot_op = any_cast<op::dot>(ins->get_operator());
+            float new_alpha =
+                dot_op.alpha / (ins_quant_params[0].first * ins_quant_params[1].first);
+            float new_beta = dot_op.beta;
             // We need additional checking about the quant_alpha value. If
             // abs(quant_alpha) > 50 (some tmp value set here), we can convert
             // it to an integer as the new_alpha in the quant_dot
@@ -352,8 +352,9 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
                         auto beta_c =
                             prog.insert_instruction(ins, op::mul{}, l_beta, inputs.back());
                         prog.replace_instruction(ins, op::add{}, alpha_ab, beta_c);
-                        // auto gemm_res = prog.insert_instruction(ins, op::add{}, alpha_ab, beta_c);
-                        // prog.replace_instruction(ins, op::capture{0, print_gemm_res}, gemm_res);
+                        // auto gemm_res = prog.insert_instruction(ins, op::add{}, alpha_ab,
+                        // beta_c); prog.replace_instruction(ins, op::capture{0, print_gemm_res},
+                        // gemm_res);
                     }
                 }
             }
@@ -421,9 +422,10 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
 
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
-void capture_arguments(program& prog, const std::vector<std::string>& ins_names, 
-                       std::size_t& num_quant_params, 
-                       std::function<void(std::size_t, std::vector<argument>args)> func)
+void capture_arguments(program& prog,
+                       const std::vector<std::string>& ins_names,
+                       std::size_t& num_quant_params,
+                       std::function<void(std::size_t, std::vector<argument> args)> func)
 {
     num_quant_params = 0;
     // the int8 quantization only support dot and convolution
