@@ -188,17 +188,15 @@ PYBIND11_MODULE(migraphx, m)
     m.def("quantize", [](migraphx::program& p) { migraphx::quantize(p, {"all"}); });
     m.def("quantize_int8",
           [](migraphx::program& p,
-             std::vector<std::string>& ins_names,
-             std::vector<std::pair<float, float>>& quant_params) {
-              migraphx::quantize_int8(p, ins_names, quant_params);
+             std::vector<std::string>& ins_names) {
+              migraphx::quantize_int8(p, ins_names);
           });
 
     m.def("capture_arguments",
           [](migraphx::program& p,
              const std::vector<std::string>& ins_names,
-             std::size_t& num_quant_params,
-             std::function<void(std::size_t, std::vector<migraphx::argument> args)> func) {
-              migraphx::capture_arguments(p, ins_names, num_quant_params, func);
+             std::size_t& num_quant_params) {
+              migraphx::capture_arguments(p, ins_names, num_quant_params);
           });
 
 #ifdef HAVE_GPU
