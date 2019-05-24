@@ -169,6 +169,12 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
     //     std::cout << std::endl;
     // };
 
+    for(auto param : int8_quant_params)
+    {
+        std::cout << param.first << "\t" << param.second << std::endl;
+    }
+    std::cout << std::endl;
+
     // For now, we only support the int8 quantization of gemm and convolution
     std::vector<std::string> op_names = {"dot", "convolution"};
     if(!std::all_of(ins_names.begin(), ins_names.end(), [&](auto name) {
@@ -440,10 +446,9 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
 void capture_arguments(program& prog,
-                       const std::vector<std::string>& ins_names,
-                       std::size_t& num_quant_params)
+                       const std::vector<std::string>& ins_names)
 {
-    num_quant_params = 0;
+    size_t num_quant_params = 0;
     // the int8 quantization only support dot and convolution
     std::vector<std::string> op_names = {"dot", "convolution", "quant_dot", "quant_convolution"};
     if(!std::all_of(ins_names.begin(), ins_names.end(), [&](auto name) {
@@ -480,6 +485,9 @@ void capture_arguments(program& prog,
         }
         instruction::replace(ins, ins->get_operator(), ins->get_shape(), new_args);
     }
+
+    // set one pair of parameter for each argument
+    int8_quant_params.resize(num_quant_params);
 }
 
 } // namespace MIGRAPHX_INLINE_NS
