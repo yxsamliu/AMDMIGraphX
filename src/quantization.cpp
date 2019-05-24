@@ -445,8 +445,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
 
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
-void capture_arguments(program& prog,
-                       const std::vector<std::string>& ins_names)
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
 {
     size_t num_quant_params = 0;
     // the int8 quantization only support dot and convolution

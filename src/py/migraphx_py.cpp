@@ -153,9 +153,7 @@ PYBIND11_MODULE(migraphx, m)
     py::class_<migraphx::target>(m, "target");
 
     py::class_<migraphx::program>(m, "program")
-        .def("clone", [] (migraphx::program& p) {
-            return *(new migraphx::program(p));
-        })
+        .def("clone", [](migraphx::program& p) { return *(new migraphx::program(p)); })
         .def("get_parameter_shapes", &migraphx::program::get_parameter_shapes)
         .def("get_shape", &migraphx::program::get_shape)
         .def("compile", [](migraphx::program& p, const migraphx::target& t) { p.compile(t); })
@@ -193,11 +191,9 @@ PYBIND11_MODULE(migraphx, m)
         migraphx::quantize_int8(p, ins_names);
     });
 
-    m.def("capture_arguments",
-          [](migraphx::program& p,
-             const std::vector<std::string>& ins_names) {
-              migraphx::capture_arguments(p, ins_names);
-          });
+    m.def("capture_arguments", [](migraphx::program& p, const std::vector<std::string>& ins_names) {
+        migraphx::capture_arguments(p, ins_names);
+    });
 
 #ifdef HAVE_GPU
     m.def("allocate_gpu", &migraphx::gpu::allocate_gpu, py::arg("s"), py::arg("host") = false);
