@@ -186,11 +186,9 @@ PYBIND11_MODULE(migraphx, m)
         migraphx::quantize(p, ins_names);
     });
     m.def("quantize", [](migraphx::program& p) { migraphx::quantize(p, {"all"}); });
-    m.def("quantize_int8",
-          [](migraphx::program& p,
-             std::vector<std::string>& ins_names) {
-              migraphx::quantize_int8(p, ins_names);
-          });
+    m.def("quantize_int8", [](migraphx::program& p, std::vector<std::string>& ins_names) {
+        migraphx::quantize_int8(p, ins_names);
+    });
 
     m.def("capture_arguments",
           [](migraphx::program& p,
