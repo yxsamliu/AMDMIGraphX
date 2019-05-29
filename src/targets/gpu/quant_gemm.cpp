@@ -2,6 +2,8 @@
 #include <migraphx/gpu/device/pack.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
+#include <iomanip>
+#include <fstream>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -94,6 +96,7 @@ argument miopen_quant_gemm::compute(context& ctx,
     rocblas_int ldb = args[1].get_shape().strides()[transb ? dim_1 : dim_0];
     rocblas_int ldc = args[2].get_shape().strides()[dim_0];
 
+    auto arg_1 = gpu::from_gpu(args[1]);
     if(!transb)
     {
         device::pack_a(ctx.get_stream().get(), arg_b, args[1]);

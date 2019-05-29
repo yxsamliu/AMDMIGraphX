@@ -139,37 +139,10 @@ void calc_quant_params(std::size_t ins_index, std::vector<migraphx::argument> ar
 // -128 ~ 127. To convert the float or double to int8, we need a scale and
 // a shift, then the convert can be done as v_int8 = fp * scale + shift.
 // To simplify the changes, we consider shift as 0.0f for now.
-void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
+void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
+                   const std::vector<std::pair<float, float>>& quant_params)
 {
-    // // For debugging
-    // auto print_gemm_res = [&](std::size_t ins_index, std::vector<migraphx::argument> args) {
-    //     // scale and shift is need for only int8 type, and we do not
-    //     // consider shift, so set shift to 0
-    //     std::vector<float> vec_val;
-    //     args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
-    //     std::cout << "quant_gemm = " << std::endl;
-    //     for (size_t i = 0; i < 20; i++)
-    //     {
-    //         std::cout << vec_val[i] << "\t";
-    //     }
-    //     std::cout << std::endl;
-    // };
-
-    // // For debugging
-    // auto print_conv_res = [&](std::size_t ins_index, std::vector<migraphx::argument> args) {
-    //     // scale and shift is need for only int8 type, and we do not
-    //     // consider shift, so set shift to 0
-    //     std::vector<float> vec_val;
-    //     args.front().visit([&](auto output) { vec_val.assign(output.begin(), output.end()); });
-    //     std::cout << "quant_conv = " << std::endl;
-    //     for (size_t i = 0; i < 20; i++)
-    //     {
-    //         std::cout << vec_val[i] << "\t";
-    //     }
-    //     std::cout << std::endl;
-    // };
-
-    for(auto param : int8_quant_params)
+    for(auto param : quant_params)
     {
         std::cout << param.first << "\t" << param.second << std::endl;
     }
@@ -210,7 +183,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
             // operation, if it has 3 inputs, then the last one should
             // be converted to int32_type
             shape::type_t quant_type = shape::int8_type;
-            auto param               = int8_quant_params[quant_param_index++];
+            auto param               = quant_params[quant_param_index++];
             ins_quant_params.push_back(param);
             if(ins->name() == "dot" and inputs.size() == 3 and input == inputs.back())
             {
@@ -332,7 +305,7 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
                         auto l_beta = prog.add_literal(literal{oq_dot->get_shape(), vec_beta});
                         auto beta_c =
                             prog.insert_instruction(ins, op::mul{}, l_beta, inputs.back());
-                        prog.replace_instruction(ins, op::add{}, q_dot, beta_c);
+                        prog.replace_instruction(ins, op::add{}, oq_dot, beta_c);
                     }
                 }
             }
@@ -441,6 +414,17 @@ void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
             MIGRAPHX_THROW("INT8_QUANTIZE: does not support operator" + ins->name());
         }
     }
+}
+
+void quantize_int8(program& prog, const std::vector<std::string>& ins_names)
+{
+    quantize_int8(prog, ins_names, int8_quant_params);
+}
+
+void quantize_int8(program& prog)
+{
+    std::vector<std::string> ins_names = {"dot", "convolution"};
+    quantize_int8(prog, ins_names, int8_quant_params);
 }
 
 // For the input of each input argument, we need to insert a
