@@ -139,7 +139,8 @@ void calc_quant_params(std::size_t ins_index, std::vector<migraphx::argument> ar
 // -128 ~ 127. To convert the float or double to int8, we need a scale and
 // a shift, then the convert can be done as v_int8 = fp * scale + shift.
 // To simplify the changes, we consider shift as 0.0f for now.
-void quantize_int8(program& prog, const std::vector<std::string>& ins_names,
+void quantize_int8(program& prog,
+                   const std::vector<std::string>& ins_names,
                    const std::vector<std::pair<float, float>>& quant_params)
 {
     for(auto param : quant_params)

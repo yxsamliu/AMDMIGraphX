@@ -17,7 +17,8 @@ void quantize(program& prog);
 
 void quantize_int8(program& prog);
 void quantize_int8(program& prog, const std::vector<std::string>& ins_names);
-void quantize_int8(program& prog, const std::vector<std::string>& ins_names, 
+void quantize_int8(program& prog,
+                   const std::vector<std::string>& ins_names,
                    const std::vector<std::pair<float, float>>& quanat_params);
 
 // insert the capture operator for the inputs of each operator to be quantized
