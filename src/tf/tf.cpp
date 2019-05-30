@@ -348,10 +348,7 @@ struct tf_parser
         // check if weights are from a constant
         if(contains(attributes, "padding"))
         {
-            const std::string& pad_mode     = attributes.at("padding").s();
-            std::vector<size_t> weight_dims = weights->get_shape().lens();
-            size_t weight_h                 = weight_dims[2];
-            size_t weight_w                 = weight_dims[3];
+            const std::string& pad_mode = attributes.at("padding").s();
             if(pad_mode.find("SAME") != std::string::npos)
             {
                 op.padding_mode = op::padding_mode_t::same;
