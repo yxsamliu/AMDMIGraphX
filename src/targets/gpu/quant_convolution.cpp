@@ -1,6 +1,7 @@
 #include <migraphx/gpu/quant_convolution.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
+#include <iomanip>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -37,6 +38,29 @@ argument miopen_quant_convolution::compute(context& ctx,
         MIGRAPHX_THROW("QUANT_CONVOLUTION: transform input tensor failed");
     }
 
+    auto arg_0 = gpu::from_gpu(args[0]);
+    auto arg4_0 = gpu::from_gpu(arg_vec4_x);
+    std::vector<int8_t> vec_0, vec4_0;
+    arg_0.visit([&](auto in){vec_0.assign(in.begin(), in.end());});
+    arg4_0.visit([&](auto in){vec4_0.assign(in.begin(), in.end());});
+
+    std::cout << "arg_0's shape = " << arg_0.get_shape() << std::endl;
+    std::cout << "arg4_0's shape = " << arg4_0.get_shape() << std::endl;
+
+    std::cout << "arg_0 = " << std::endl;
+    for (size_t i = 0; i < 200; i++)
+    {
+        std::cout << std::setw(12) << static_cast<int>(vec_0[i]);
+    }
+    std::cout << std::endl;
+
+    std::cout << "arg4_0 = " << std::endl;
+    for (size_t i = 0; i < 200; i++)
+    {
+        std::cout << std::setw(12) << static_cast<int>(vec4_0[i]);
+    }
+    std::cout << std::endl;
+
     // pack input to vec4 format
     status = miopenTransformTensor(ctx.get_stream().get_miopen(),
                                    &alpha,
@@ -49,6 +73,30 @@ argument miopen_quant_convolution::compute(context& ctx,
     {
         MIGRAPHX_THROW("QUANT_CONVOLUTION: transform weight tensor failed");
     }
+
+    auto arg_1 = gpu::from_gpu(args[1]);
+    auto arg4_1 = gpu::from_gpu(arg_vec4_w);
+
+    std::cout << "arg_1's shape = " << arg_1.get_shape() << std::endl;
+    std::cout << "arg4_1's shape = " << arg4_1.get_shape() << std::endl;
+
+    std::vector<int8_t> vec_1, vec4_1;
+    arg_1.visit([&](auto in){vec_1.assign(in.begin(), in.end());});
+    arg4_1.visit([&](auto in){vec4_1.assign(in.begin(), in.end());});
+
+    std::cout << "arg_1 = " << std::endl;
+    for (size_t i = 0; i < 200; i++)
+    {
+        std::cout << std::setw(12) << static_cast<int>(vec_1[i]);
+    }
+    std::cout << std::endl;
+
+    std::cout << "arg4_1 = " << std::endl;
+    for (size_t i = 0; i < 200; i++)
+    {
+        std::cout << std::setw(12) << static_cast<int>(vec4_1[i]);
+    }
+    std::cout << std::endl;
 
     status = miopenConvolutionForward(ctx.get_stream().get_miopen(),
                                       &alpha,
