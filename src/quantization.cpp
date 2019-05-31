@@ -14,6 +14,8 @@
 #include <migraphx/stringutils.hpp>
 #include <migraphx/ranges.hpp>
 #include <utility>
+#include <iomanip>
+#include <fstream>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -35,6 +37,11 @@ instruction_ref insert_quant_ins(program& prog,
         return ins;
     }
 
+    if (scale < 0.0f)
+    {
+        MIGRAPHX_THROW("INSERT_QUANT_INS: scale less than 0");
+    }
+    
     assert(ins->get_shape().type() == shape::float_type ||
            ins->get_shape().type() == shape::double_type ||
            ins->get_shape().type() == shape::int32_type);
@@ -143,9 +150,10 @@ void quantize_int8(program& prog,
                    const std::vector<std::string>& ins_names,
                    const std::vector<std::pair<float, float>>& quant_params)
 {
-    for(auto param : quant_params)
+    for(size_t i = 0; i < quant_params.size(); i++)
     {
-        std::cout << param.first << "\t" << param.second << std::endl;
+        auto param = quant_params.at(i);
+        std::cout << "index = " << i << ", scale = " << param.first << "\t" << param.second << std::endl;
     }
     std::cout << std::endl;
 
@@ -160,6 +168,7 @@ void quantize_int8(program& prog,
 
     std::size_t quant_param_index = 0;
     std::unordered_map<instruction_ref, instruction_ref> map_quant_ins;
+    std::unordered_map<instruction_ref, std::size_t> map_index;
     for(auto ins : iterator_for(prog))
     {
         if(not contains(ins_names, ins->name()))
@@ -180,12 +189,18 @@ void quantize_int8(program& prog,
         std::vector<std::pair<float, float>> ins_quant_params;
         for(auto input : inputs)
         {
+            // calculate the index of each instruction to be quantized
+            if (map_index.count(input) == 0)
+            {
+                map_index[input] = quant_param_index++;
+            }
+            auto param = quant_params[map_index[input]];
+            ins_quant_params.push_back(param);
+
             // In general, the target_type is int8, but for the dot
             // operation, if it has 3 inputs, then the last one should
             // be converted to int32_type
             shape::type_t quant_type = shape::int8_type;
-            auto param               = quant_params[quant_param_index++];
-            ins_quant_params.push_back(param);
             if(ins->name() == "dot" and inputs.size() == 3 and input == inputs.back())
             {
                 quant_type = shape::int32_type;
@@ -267,6 +282,8 @@ void quantize_int8(program& prog,
             // addition
             else if(fabs(new_alpha) >= threshold)
             {
+                // truncate to the nearest integer
+                new_alpha = new_alpha > 0.0 ? new_alpha + 0.5 : new_alpha - 0.5;
                 int32_t quant_alpha = static_cast<int32_t>(new_alpha);
                 int32_t quant_beta  = 0;
                 if(orig_type == shape::int32_type)
@@ -390,7 +407,7 @@ void quantize_int8(program& prog,
                         converted_inputs);
                     prog.replace_instruction(ins, op::mul{}, quant_conv, fl);
                     // auto q_conv = prog.insert_instruction(ins, op::mul{}, quant_conv, fl);
-                    // prog.replace_instruction(ins, op::capture{0, print_conv_res}, q_conv);
+                    // prog.replace_instruction(ins, op::capture{10000, print_conv_res}, q_conv);
                 }
             }
             else
@@ -412,8 +429,13 @@ void quantize_int8(program& prog,
         }
         else
         {
-            MIGRAPHX_THROW("INT8_QUANTIZE: does not support operator" + ins->name());
+            MIGRAPHX_THROW("QUANTIZE_INT8: does not support operator" + ins->name());
         }
+    }
+
+    if (quant_param_index != quant_params.size())
+    {
+        MIGRAPHX_THROW("QUANTIZE_INT8: number of scales does not match");
     }
 }
 
@@ -430,7 +452,8 @@ void quantize_int8(program& prog)
 
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
-void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names, 
+                       std::function<void(std::size_t, std::vector<argument>)> func)
 {
     size_t num_quant_params = 0;
     // the int8 quantization only support dot and convolution
@@ -462,7 +485,7 @@ void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
             else
             {
                 new_ins = prog.insert_instruction(
-                    std::next(input), op::capture{num_quant_params++, calc_quant_params}, input);
+                    std::next(input), op::capture{num_quant_params++, func}, input);
                 ins_map[input] = new_ins;
             }
             new_args.push_back(new_ins);
@@ -471,7 +494,13 @@ void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
     }
 
     // set one pair of parameter for each argument
-    int8_quant_params.resize(num_quant_params);
+    int8_quant_params.resize(num_quant_params, std::make_pair(-1.0f, -1.0f));
+
+}
+
+void capture_arguments(program& prog, const std::vector<std::string>& ins_names)
+{
+    capture_arguments(prog, ins_names, calc_quant_params);
 }
 
 } // namespace MIGRAPHX_INLINE_NS
