@@ -37,11 +37,11 @@ instruction_ref insert_quant_ins(program& prog,
         return ins;
     }
 
-    if (scale < 0.0f)
+    if(scale < 0.0f)
     {
         MIGRAPHX_THROW("INSERT_QUANT_INS: scale less than 0");
     }
-    
+
     assert(ins->get_shape().type() == shape::float_type ||
            ins->get_shape().type() == shape::double_type ||
            ins->get_shape().type() == shape::int32_type);
@@ -153,7 +153,8 @@ void quantize_int8(program& prog,
     for(size_t i = 0; i < quant_params.size(); i++)
     {
         auto param = quant_params.at(i);
-        std::cout << "index = " << i << ", scale = " << param.first << "\t" << param.second << std::endl;
+        std::cout << "index = " << i << ", scale = " << param.first << "\t" << param.second
+                  << std::endl;
     }
     std::cout << std::endl;
 
@@ -190,7 +191,7 @@ void quantize_int8(program& prog,
         for(auto input : inputs)
         {
             // calculate the index of each instruction to be quantized
-            if (map_index.count(input) == 0)
+            if(map_index.count(input) == 0)
             {
                 map_index[input] = quant_param_index++;
             }
@@ -283,7 +284,7 @@ void quantize_int8(program& prog,
             else if(fabs(new_alpha) >= threshold)
             {
                 // truncate to the nearest integer
-                new_alpha = new_alpha > 0.0 ? new_alpha + 0.5 : new_alpha - 0.5;
+                new_alpha           = new_alpha > 0.0 ? new_alpha + 0.5 : new_alpha - 0.5;
                 int32_t quant_alpha = static_cast<int32_t>(new_alpha);
                 int32_t quant_beta  = 0;
                 if(orig_type == shape::int32_type)
@@ -433,7 +434,7 @@ void quantize_int8(program& prog,
         }
     }
 
-    if (quant_param_index != quant_params.size())
+    if(quant_param_index != quant_params.size())
     {
         MIGRAPHX_THROW("QUANTIZE_INT8: number of scales does not match");
     }
@@ -452,7 +453,8 @@ void quantize_int8(program& prog)
 
 // For the input of each input argument, we need to insert a
 // capture operator to compute the scale and shift
-void capture_arguments(program& prog, const std::vector<std::string>& ins_names, 
+void capture_arguments(program& prog,
+                       const std::vector<std::string>& ins_names,
                        std::function<void(std::size_t, std::vector<argument>)> func)
 {
     size_t num_quant_params = 0;
@@ -495,7 +497,6 @@ void capture_arguments(program& prog, const std::vector<std::string>& ins_names,
 
     // set one pair of parameter for each argument
     int8_quant_params.resize(num_quant_params, std::make_pair(-1.0f, -1.0f));
-
 }
 
 void capture_arguments(program& prog, const std::vector<std::string>& ins_names)

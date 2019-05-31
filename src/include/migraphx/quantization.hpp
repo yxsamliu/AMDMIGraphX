@@ -23,7 +23,8 @@ void quantize_int8(program& prog,
 
 // insert the capture operator for the inputs of each operator to be quantized
 // to int8
-void capture_arguments(program& prog, const std::vector<std::string>& ins_names, 
+void capture_arguments(program& prog,
+                       const std::vector<std::string>& ins_names,
                        std::function<void(std::size_t, std::vector<argument>)> func);
 void capture_arguments(program& prog, const std::vector<std::string>& ins_names);
 
