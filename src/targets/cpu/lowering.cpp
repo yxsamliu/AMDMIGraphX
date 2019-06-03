@@ -533,15 +533,15 @@ struct cpu_softmax
     template <typename T>
     std::size_t compute_batch_index(T idx, shape& batch_shape, int axis) const
     {
-        idx.erase(idx.begin() + axis);
+        idx[axis] = 0;
         return batch_shape.index(idx);
     }
 
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
-        auto batch_lens = output_shape.lens();
-        batch_lens.erase(batch_lens.begin() + op.axis);
+        auto batch_lens     = output_shape.lens();
+        batch_lens[op.axis] = 1;
         shape batch_shape{shape::int32_type, batch_lens};
 
         visit_all(result, args[0])([&](auto output, auto input) {
