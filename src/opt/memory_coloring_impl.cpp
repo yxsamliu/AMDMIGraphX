@@ -85,6 +85,7 @@ bool memory_coloring_impl::allocate(interval_ptr interval)
             offset += (element_size - (offset % element_size));
         conflict_queue.pop();
     }
+    offset = (offset + 3) / 4 * 4;
     segment.offset = offset;
     MIGRAPHX_DEBUG(segment.dump());
     required_bytes = std::max(required_bytes, offset + segment.size);
