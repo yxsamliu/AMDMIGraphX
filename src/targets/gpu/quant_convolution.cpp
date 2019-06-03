@@ -65,7 +65,7 @@ argument miopen_quant_convolution::compute(context& ctx,
                                       args[3].implicit(),
                                       args[2].implicit(),
                                       args[2].get_shape().bytes());
-                                    
+
     if(status != miopenStatusSuccess)
     {
         MIGRAPHX_THROW("QUANT_CONVOLUTION: run convolution forward failed");
