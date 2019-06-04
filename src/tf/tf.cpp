@@ -345,7 +345,6 @@ struct tf_parser
             op.dilation[1] = dilation[3];
         }
         auto weights = to_kcxy(args[1]);
-        // check if weights are from a constant
         if(contains(attributes, "padding"))
         {
             const std::string& pad_mode     = attributes.at("padding").s();
@@ -416,18 +415,6 @@ struct tf_parser
         }
 
         auto weights = to_kcxy(args[1]);
-        // check if weights are from a constant
-        if(weights->name() != "@param")
-        {
-            if(is_nhwc)
-            {
-                weights = prog.add_instruction(op::transpose{{1, 3, 0, 2}}, args[1]);
-            }
-            else
-            {
-                weights = prog.add_instruction(op::transpose{{3, 2, 0, 1}}, args[1]);
-            }
-        }
 
         if(contains(attributes, "padding"))
         {
