@@ -2,8 +2,10 @@
 #include <migraphx/onnx.hpp>
 
 #include <migraphx/gpu/target.hpp>
+#include <migraphx/cpu/target.hpp>
 #include <migraphx/gpu/hip.hpp>
 #include <migraphx/generate.hpp>
+#include <migraphx/quantization.hpp>
 #include <migraphx/verify.hpp>
 
 migraphx::program::parameter_map create_param_map(const migraphx::program& p, bool gpu = true)
@@ -21,16 +23,50 @@ migraphx::program::parameter_map create_param_map(const migraphx::program& p, bo
 
 int main(int argc, char const* argv[])
 {
-    if(argc > 1)
+    if(argc < 2)
     {
-        std::string file = argv[1];
-        std::size_t n    = argc > 2 ? std::stoul(argv[2]) : 50;
-        auto p           = migraphx::parse_onnx(file);
-        std::cout << "Compiling ... " << std::endl;
-        p.compile(migraphx::gpu::target{});
-        std::cout << "Allocating params ... " << std::endl;
-        auto m = create_param_map(p);
-        std::cout << "Running performance report ... " << std::endl;
-        p.perf_report(std::cout, n, m);
+        std::cout << "Usage: " << argv[0] << " onnx n quant_flag" << std::endl;
+        std::cout << "quant_flag: " << std::endl;
+        std::cout << "      fp32   default" << std::endl;
+        std::cout << "      fp16   fp16 quantization" << std::endl;
+        std::cout << "      int8   int8 quantization" << std::endl;
+
+        return 0;
     }
+
+    std::string file = argv[1];
+    std::size_t n    = argc > 2 ? std::stoul(argv[2]) : 50;
+    auto p           = migraphx::parse_onnx(file);
+
+    std::string quant_flag("fp32");
+    if(argc == 4)
+    {
+        quant_flag = argv[3];
+    }
+
+    if(!quant_flag.compare("fp16"))
+    {
+        std::cout << "Quantize to fp16 ... " << std::endl;
+        migraphx::quantize(p);
+    }
+    else if(!quant_flag.compare("int8"))
+    {
+        std::cout << "Quantize to int8 ... " << std::endl;
+        std::cout << "First, capture arguments to calculate scale ... " << std::endl;
+        auto cap_p = p;
+        migraphx::capture_arguments(cap_p);
+        cap_p.compile(migraphx::cpu::target{});
+        auto cap_m = create_param_map(cap_p, false);
+        cap_p.eval(cap_m);
+
+        std::cout << "Second, quantize program to int8 for gemm and convolution ... " << std::endl;
+        migraphx::quantize_int8(p);
+    }
+
+    std::cout << "Compiling ... " << std::endl;
+    p.compile(migraphx::gpu::target{});
+    std::cout << "Allocating params ... " << std::endl;
+    auto m = create_param_map(p);
+    std::cout << "Running performance report ... " << std::endl;
+    p.perf_report(std::cout, n, m);
 }
