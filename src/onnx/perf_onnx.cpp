@@ -2,6 +2,7 @@
 #include <migraphx/onnx.hpp>
 
 #include <migraphx/gpu/target.hpp>
+#include <migraphx/cpu/target.hpp>
 #include <migraphx/gpu/hip.hpp>
 #include <migraphx/generate.hpp>
 #include <migraphx/quantization.hpp>
@@ -40,21 +41,28 @@ int main(int argc, char const* argv[])
     std::string quant_flag("fp32");
     if(argc == 4)
     {
-        std::string quant_flag = argv[3];
+        quant_flag = argv[3];
     }
 
-    if(quant_flag == "fp16")
+    if(!quant_flag.compare("fp16"))
     {
         std::cout << "Quantize to fp16 ... " << std::endl;
         migraphx::quantize(p);
     }
-    else if(quant_flag == "int8")
+    else if(!quant_flag.compare("int8"))
     {
         std::cout << "Quantize to int8 ... " << std::endl;
         std::cout << "First, capture arguments to calculate scale ... " << std::endl;
         auto cap_p = p;
         migraphx::capture_arguments(cap_p);
+        cap_p.compile(migraphx::cpu::target{});
+        auto cap_m = create_param_map(cap_p, false);
+        cap_p.eval(cap_m);
+
+        std::cout << "Second, quantize program to int8 for gemm and convolution ... " << std::endl;
+        migraphx::quantize_int8(p);
     }
+
     std::cout << "Compiling ... " << std::endl;
     p.compile(migraphx::gpu::target{});
     std::cout << "Allocating params ... " << std::endl;
