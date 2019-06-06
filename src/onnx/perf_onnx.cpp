@@ -22,7 +22,7 @@ migraphx::program::parameter_map create_param_map(const migraphx::program& p, bo
 
 int main(int argc, char const* argv[])
 {
-    if (argc < 2)
+    if(argc < 2)
     {
         std::cout << "Usage: " << argv[0] << " onnx n quant_flag" << std::endl;
         std::cout << "quant_flag: " << std::endl;
@@ -38,17 +38,17 @@ int main(int argc, char const* argv[])
     auto p           = migraphx::parse_onnx(file);
 
     std::string quant_flag("fp32");
-    if (argc == 4)
+    if(argc == 4)
     {
         std::string quant_flag = argv[3];
     }
 
-    if (quant_flag == "fp16")
+    if(quant_flag == "fp16")
     {
         std::cout << "Quantize to fp16 ... " << std::endl;
         migraphx::quantize(p);
     }
-    else if (quant_flag == "int8")
+    else if(quant_flag == "int8")
     {
         std::cout << "Quantize to int8 ... " << std::endl;
         std::cout << "First, capture arguments to calculate scale ... " << std::endl;
