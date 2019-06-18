@@ -74,12 +74,17 @@ struct gather
                 }
                 else
                 {
-                    auto out_lens        = data.get_shape().lens();
+                    auto data_lens       = data.get_shape().lens();
+                    auto out_lens        = data_lens;
                     out_lens[axis_index] = indices.get_shape().elements();
                     migraphx::shape out_comp_shape{data.get_shape().type(), out_lens};
                     shape_for_each(out_comp_shape, [&](const auto& out_idx) {
                         auto data_idx        = out_idx;
                         data_idx[axis_index] = indices[data_idx[axis_index]];
+                        if (data_idx[axis_index] >= data_lens[axis_index])
+                        {
+                            MIGRAPHX_THROW("GATHER: indices in axis dim are out of range");
+                        }
                         output[out_comp_shape.index(out_idx.begin(), out_idx.end())] =
                             data(data_idx.begin(), data_idx.end());
                     });
