@@ -81,7 +81,7 @@ struct gather
                     shape_for_each(out_comp_shape, [&](const auto& out_idx) {
                         auto data_idx        = out_idx;
                         data_idx[axis_index] = indices[data_idx[axis_index]];
-                        if (data_idx[axis_index] >= data_lens[axis_index])
+                        if(data_idx[axis_index] >= data_lens[axis_index])
                         {
                             MIGRAPHX_THROW("GATHER: indices in axis dim are out of range");
                         }
