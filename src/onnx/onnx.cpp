@@ -518,10 +518,10 @@ struct onnx_parser
         auto l2 = (transb) ? prog.add_instruction(op::transpose{perm}, args[1]) : args[1];
         if(args.size() == 3 and beta != 0.0f and args[2]->get_shape().elements() > 0)
         {
-            auto l12 = prog.add_instruction(op::dot{alpha, beta}, l1, l2);
-            auto out_lens   = l12->get_shape().lens();
-            auto l3         = args[2];
-            auto l3_lens    = l3->get_shape().lens();
+            auto l12      = prog.add_instruction(op::dot{alpha, beta}, l1, l2);
+            auto out_lens = l12->get_shape().lens();
+            auto l3       = args[2];
+            auto l3_lens  = l3->get_shape().lens();
             if(!std::equal(out_lens.begin(), out_lens.end(), l3_lens.begin(), l3_lens.end()))
             {
                 l3 = prog.add_instruction(op::multibroadcast{out_lens}, args[2]);
