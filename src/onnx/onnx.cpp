@@ -522,20 +522,21 @@ struct onnx_parser
 
         auto l1 = (transa) ? prog.add_instruction(op::transpose{perm}, args[0]) : args[0];
         auto l2 = (transb) ? prog.add_instruction(op::transpose{perm}, args[1]) : args[1];
-        if(args.size() == 3)
+        if(args.size() == 3 and beta != 0.0f and args[2]->get_shape().elements() > 0)
         {
-            if(beta != 0.f && args[2]->get_shape().elements() > 0)
+            auto l12      = prog.add_instruction(op::dot{alpha, beta}, l1, l2);
+            auto out_lens = l12->get_shape().lens();
+            auto l3       = args[2];
+            auto l3_lens  = l3->get_shape().lens();
+            if(!std::equal(out_lens.begin(), out_lens.end(), l3_lens.begin(), l3_lens.end()))
             {
-                auto out_lens   = l1->get_shape().lens();
-                out_lens.back() = l2->get_shape().lens().back();
-                auto l3         = args[2];
-                auto l3_lens    = l3->get_shape().lens();
-                if(!std::equal(out_lens.begin(), out_lens.end(), l3_lens.begin(), l3_lens.end()))
-                {
-                    l3 = prog.add_instruction(op::multibroadcast{out_lens}, args[2]);
-                }
-                return prog.add_instruction(op::dot{alpha, beta}, l1, l2, l3);
+                l3 = prog.add_instruction(op::multibroadcast{out_lens}, args[2]);
             }
+
+            std::vector<float> vec_beta(l12->get_shape().elements(), beta);
+            auto l_beta = prog.add_literal(l3->get_shape(), vec_beta);
+            auto beta_c = prog.add_instruction(op::mul{}, l_beta, l3);
+            return prog.add_instruction(op::add{}, l12, beta_c);
         }
 
         return prog.add_instruction(op::dot{alpha, beta}, l1, l2);
