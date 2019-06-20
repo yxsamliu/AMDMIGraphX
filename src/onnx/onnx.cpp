@@ -534,7 +534,8 @@ struct onnx_parser
             }
 
             std::vector<float> vec_beta(l12->get_shape().elements(), beta);
-            auto l_beta = prog.add_literal(l3->get_shape(), vec_beta);
+            auto l_beta =
+                prog.add_literal(literal(l12->get_shape(), vec_beta.begin(), vec_beta.end()));
             auto beta_c = prog.add_instruction(op::mul{}, l_beta, l3);
             return prog.add_instruction(op::add{}, l12, beta_c);
         }
