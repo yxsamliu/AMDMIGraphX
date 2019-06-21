@@ -17,10 +17,10 @@ argument logsoftmax(hipStream_t stream,
                     int axis)
 {
 
-    auto lens         = output_shape.lens();
-    auto n_dims = lens[axis];
-    auto batch_lens   = lens;
-    batch_lens[axis]  = 1;
+    auto lens        = output_shape.lens();
+    auto n_dims      = lens[axis];
+    auto batch_lens  = lens;
+    batch_lens[axis] = 1;
     migraphx::shape batch_shape{output_shape.type(), batch_lens};
 
     visit_all(args.back(), args.front())([&](auto output, auto input) {

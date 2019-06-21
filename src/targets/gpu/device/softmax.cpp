@@ -120,7 +120,7 @@ argument softmax(hipStream_t stream,
                 {
                     data_idx[axis]    = i;
                     size_t index      = desc_data.linear(data_idx);
-                    auto val = input_ptr[index] - lds_data[block_size];
+                    auto val          = input_ptr[index] - lds_data[block_size];
                     output_ptr[index] = ::exp(to_hip_type(val)) / lds_data[block_size1];
                 }
             });
