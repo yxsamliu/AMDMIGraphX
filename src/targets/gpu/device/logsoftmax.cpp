@@ -18,7 +18,7 @@ argument logsoftmax(hipStream_t stream,
 {
 
     auto lens         = output_shape.lens();
-    auto num_in_batch = lens[axis];
+    auto n_dims = lens[axis];
     auto batch_lens   = lens;
     batch_lens[axis]  = 1;
     migraphx::shape batch_shape{output_shape.type(), batch_lens};
@@ -31,8 +31,6 @@ argument logsoftmax(hipStream_t stream,
             hip_tensor_descriptor<n_dim> desc_data(output_shape);
 
             // use one block for items in one batch.
-            // opt 1, load all data to lds then use the same approach as
-            // the current optimization
             const size_t block_size = 1024;
             launch(
                 stream, batch_shape.elements() * block_size, block_size)([=](auto idx) __device__ {
@@ -46,9 +44,9 @@ argument logsoftmax(hipStream_t stream,
                 auto batch_idx = desc_batch.multi(blk_idx);
                 auto data_idx  = batch_idx;
                 // load data to lds and compute the batch max
-                size_t item_num      = num_in_batch;
+                size_t item_num      = n_dims;
                 lds_data[block_size] = input_ptr[0];
-                for(size_t i = thr_idx; i < num_in_batch; i += block_size)
+                for(size_t i = thr_idx; i < n_dims; i += block_size)
                 {
                     data_idx[axis] = i;
                     lds_data[i]    = input_ptr[desc_data.linear(data_idx)];
@@ -85,8 +83,8 @@ argument logsoftmax(hipStream_t stream,
 
                 const size_t block_size1 = block_size + 1;
                 lds_data[block_size1]    = 0;
-                item_num                 = num_in_batch;
-                for(size_t i = thr_idx; i < num_in_batch; i += block_size)
+                item_num                 = n_dims;
+                for(size_t i = thr_idx; i < n_dims; i += block_size)
                 {
                     data_idx[axis] = i;
                     lds_data[i]    = input_ptr[desc_data.linear(data_idx)] - lds_data[block_size];
@@ -120,8 +118,7 @@ argument logsoftmax(hipStream_t stream,
 
                 auto log_batch_sum =
                     ::log(to_hip_type(lds_data[block_size1])) + lds_data[block_size];
-                item_num = num_in_batch;
-                for(size_t i = thr_idx; i < num_in_batch; i += block_size)
+                for(size_t i = thr_idx; i < n_dims; i += block_size)
                 {
                     data_idx[axis]    = i;
                     size_t index      = desc_data.linear(data_idx);
