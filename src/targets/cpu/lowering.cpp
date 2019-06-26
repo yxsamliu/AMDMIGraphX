@@ -529,27 +529,11 @@ struct cpu_softmax
 
     std::string name() const { return "cpu::softmax"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
-
-    std::vector<size_t> compute_batch_indices(size_t idx, const shape& s) const
-    {
-        std::vector<std::size_t> indices(s.lens().size());
-        std::transform(s.strides().begin(),
-                       s.strides().end(),
-                       s.lens().begin(),
-                       indices.begin(),
-                       [&](std::size_t stride, std::size_t len) {
-                           assert(len > 0 and stride > 0);
-                           return (idx / stride) % len;
-                       });
-
-        return indices;
-    }
-
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
         auto batch_lens     = output_shape.lens();
-        size_t n_dims       = batch_lens[op.axis];
+        std::size_t n_dims  = batch_lens[op.axis];
         batch_lens[op.axis] = 1;
         shape batch_shape{shape::int32_type, batch_lens};
 
@@ -559,28 +543,27 @@ struct cpu_softmax
                                               std::numeric_limits<value_type>::lowest());
             std::vector<value_type> batch_sum(batch_shape.elements(), value_type(0));
             par_for(batch_shape.elements(), [&](auto i) {
-                auto idx = this->compute_batch_indices(i, batch_shape);
-
-                for(size_t j = 0; j < n_dims; ++j)
+                auto idx = batch_shape.multi(i);
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     batch_max[i] = std::max(batch_max[i], input(idx.begin(), idx.end()));
                 }
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
-                    idx[op.axis]  = j;
-                    size_t index  = output_shape.index(idx);
-                    output[index] = std::exp(input[index] - batch_max[i]);
+                    idx[op.axis]      = j;
+                    std::size_t index = output_shape.index(idx);
+                    output[index]     = std::exp(input[index] - batch_max[i]);
                 }
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     batch_sum[i] += output(idx.begin(), idx.end());
                 }
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     output(idx.begin(), idx.end()) /= batch_sum[i];
@@ -604,27 +587,11 @@ struct cpu_logsoftmax
 
     std::string name() const { return "cpu::logsoftmax"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
-
-    std::vector<size_t> compute_batch_indices(size_t idx, const shape& s) const
-    {
-        std::vector<std::size_t> indices(s.lens().size());
-        std::transform(s.strides().begin(),
-                       s.strides().end(),
-                       s.lens().begin(),
-                       indices.begin(),
-                       [&](std::size_t stride, std::size_t len) {
-                           assert(len > 0 and stride > 0);
-                           return (idx / stride) % len;
-                       });
-
-        return indices;
-    }
-
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
         auto batch_lens     = output_shape.lens();
-        size_t n_dims       = batch_lens[op.axis];
+        std::size_t n_dims  = batch_lens[op.axis];
         batch_lens[op.axis] = 1;
         shape batch_shape{shape::int32_type, batch_lens};
 
@@ -637,21 +604,21 @@ struct cpu_logsoftmax
             std::vector<value_type> batch_sum(batch_shape.elements(), value_type(0));
 
             par_for(batch_shape.elements(), [&](auto i) {
-                auto idx = this->compute_batch_indices(i, batch_shape);
-                for(size_t j = 0; j < n_dims; ++j)
+                auto idx = batch_shape.multi(i);
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     batch_max[i] = std::max(batch_max[i], input(idx.begin(), idx.end()));
                 }
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
-                    idx[op.axis]  = j;
-                    size_t index  = output_shape.index(idx);
-                    output[index] = input[index] - batch_max[i];
+                    idx[op.axis]      = j;
+                    std::size_t index = output_shape.index(idx);
+                    output[index]     = input[index] - batch_max[i];
                 }
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     batch_sum[i] += std::exp(output(idx.begin(), idx.end()));
@@ -659,7 +626,7 @@ struct cpu_logsoftmax
 
                 batch_sum[i] = std::log(batch_sum[i]);
 
-                for(size_t j = 0; j < n_dims; ++j)
+                for(std::size_t j = 0; j < n_dims; ++j)
                 {
                     idx[op.axis] = j;
                     output(idx.begin(), idx.end()) -= batch_sum[i];
