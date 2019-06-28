@@ -13,19 +13,19 @@ namespace device {
 template <class T>
 struct max_op
 {
-    T operator()(T x, T y) { return (x > y) ? x : y; }
+    T operator()(T x, T y) const { return (x > y) ? x : y; }
 };
 
 template <class T>
 struct min_op
 {
-    T operator()(T x, T y) { return (x < y) ? x : y; }
+    T operator()(T x, T y) const { return (x < y) ? x : y; }
 };
 
 template <class T>
 struct sum_op
 {
-    T operator()(T x, T y) { return x + y; }
+    T operator()(T x, T y) const { return x + y; }
 };
 
 template <class T, class Op>
@@ -42,7 +42,6 @@ inline __device__ void block_reduce(T* data_ptr,
         auto size   = item_num / 2;
         for(std::size_t i = thr_idx; i < size; i += block_size)
         {
-            // data_ptr[i] = ::max(to_hip_type(data_ptr[i]), to_hip_type(data_ptr[i + stride]));
             data_ptr[i] = op(data_ptr[i], data_ptr[i + stride]);
         }
         __syncthreads();
@@ -54,8 +53,6 @@ inline __device__ void block_reduce(T* data_ptr,
 
     if(thr_idx == 0)
     {
-        // data_ptr[max_index] =
-        //     (data_ptr[0] < data_ptr[max_index]) ? data_ptr[max_index] : data_ptr[0];
         data_ptr[max_index] = op(data_ptr[max_index], data_ptr[0]);
     }
 
