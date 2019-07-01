@@ -1,15 +1,9 @@
 #ifndef MIGRAPHX_GUARD_OPERATORS_ARGMIN_HPP
 #define MIGRAPHX_GUARD_OPERATORS_ARGMIN_HPP
 
-//#include <array>
-#include <migraphx/operation.hpp>
 #include <migraphx/check_shapes.hpp>
-//#include <migraphx/stringutils.hpp>
-//#include <migraphx/literal.hpp>
 #include <migraphx/par_dfor.hpp>
 #include <migraphx/config.hpp>
-//#include <cmath>
-//#include <utility>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
