@@ -4,6 +4,7 @@
 #include <migraphx/op/common.hpp>
 #include <migraphx/check_shapes.hpp>
 #include <migraphx/config.hpp>
+#include <migraphx/functional.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

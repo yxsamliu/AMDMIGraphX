@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <migraphx/shape.hpp>
+#include <migraphx/functional.hpp>
 #include <migraphx/argument.hpp>
 #include <migraphx/config.hpp>
 

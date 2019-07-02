@@ -5,6 +5,7 @@
 #include <migraphx/op/convert.hpp>
 #include <migraphx/gpu/oper.hpp>
 #include <migraphx/gpu/device/convert.hpp>
+#include <migraphx/reflect.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

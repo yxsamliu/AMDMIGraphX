@@ -4,6 +4,7 @@
 #include <migraphx/shape.hpp>
 #include <migraphx/reflect.hpp>
 #include <migraphx/op/concat.hpp>
+#include <migraphx/operation.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

@@ -7,6 +7,7 @@
 #include <migraphx/operation.hpp>
 #include <migraphx/config.hpp>
 #include <migraphx/check_shapes.hpp>
+#include <migraphx/functional.hpp>
 #include <vector>
 
 namespace migraphx {

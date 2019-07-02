@@ -3,6 +3,7 @@
 
 #include <migraphx/op/unary.hpp>
 #include <migraphx/config.hpp>
+#include <migraphx/functional.hpp>
 #include <limits>
 
 namespace migraphx {

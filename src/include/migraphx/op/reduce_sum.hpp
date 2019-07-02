@@ -5,6 +5,7 @@
 #include <migraphx/argument.hpp>
 #include <migraphx/shape_for_each.hpp>
 #include <migraphx/config.hpp>
+#include <migraphx/functional.hpp>
 #include <vector>
 
 namespace migraphx {

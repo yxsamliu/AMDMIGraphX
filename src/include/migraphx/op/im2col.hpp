@@ -4,6 +4,7 @@
 #include <array>
 #include <migraphx/check_shapes.hpp>
 #include <migraphx/config.hpp>
+#include <migraphx/functional.hpp>
 #include <cmath>
 #include <utility>
 
