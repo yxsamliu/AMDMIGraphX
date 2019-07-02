@@ -3,7 +3,7 @@
 
 #include <migraphx/shape.hpp>
 #include <migraphx/op/gather.hpp>
-#include <migraphx/gpu/miopen.hpp>
+#include <migraphx/reflect.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

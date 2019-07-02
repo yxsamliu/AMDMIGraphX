@@ -1,6 +1,9 @@
 #ifndef MIGRAPHX_GUARD_OPERATORS_BROADCAST_HPP
 #define MIGRAPHX_GUARD_OPERATORS_BROADCAST_HPP
 
+#include <vector>
+#include <migraphx/shape.hpp>
+#include <migraphx/argument.hpp>
 #include <migraphx/config.hpp>
 
 namespace migraphx {

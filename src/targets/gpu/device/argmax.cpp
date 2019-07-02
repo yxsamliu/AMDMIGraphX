@@ -1,11 +1,7 @@
 #include <migraphx/shape.hpp>
-#include <migraphx/argument.hpp>
 #include <migraphx/gpu/device/argmax.hpp>
-#include <migraphx/gpu/device/tensor.hpp>
-#include <migraphx/gpu/device/launch.hpp>
 #include <migraphx/gpu/device/types.hpp>
 #include <migraphx/gpu/device/arg_op.hpp>
-#include <migraphx/gpu/hip.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

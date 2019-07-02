@@ -2,6 +2,7 @@
 #define MIGRAPHX_GUARD_RTGLIB_CONCAT_HPP
 
 #include <migraphx/shape.hpp>
+#include <migraphx/reflect.hpp>
 #include <migraphx/op/concat.hpp>
 
 namespace migraphx {

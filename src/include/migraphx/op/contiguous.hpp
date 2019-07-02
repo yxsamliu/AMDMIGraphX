@@ -2,6 +2,8 @@
 #define MIGRAPHX_GUARD_OPERATORS_CONTIGUOUS_HPP
 
 #include <migraphx/check_shapes.hpp>
+#include <migraphx/argument.hpp>
+#include <migraphx/shape_for_each.hpp>
 #include <migraphx/config.hpp>
 
 namespace migraphx {

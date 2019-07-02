@@ -1,7 +1,10 @@
 #ifndef MIGRAPHX_GUARD_OPERATORS_IDENTITY_HPP
 #define MIGRAPHX_GUARD_OPERATORS_IDENTITY_HPP
 
+#include <vector>
+#include <migraphx/shape.hpp>
 #include <migraphx/config.hpp>
+#include <migraphx/argument.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

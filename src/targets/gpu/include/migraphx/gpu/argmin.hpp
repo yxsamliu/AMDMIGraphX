@@ -2,6 +2,7 @@
 #define MIGRAPHX_GUARD_RTGLIB_ARGMIN_HPP
 
 #include <migraphx/shape.hpp>
+#include <migraphx/reflect.hpp>
 #include <migraphx/op/argmin.hpp>
 #include <migraphx/gpu/device/argmin.hpp>
 

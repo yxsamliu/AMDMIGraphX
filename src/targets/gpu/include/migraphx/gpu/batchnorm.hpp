@@ -2,6 +2,8 @@
 #define MIGRAPHX_GUARD_RTGLIB_BATCHNORM_HPP
 
 #include <migraphx/shape.hpp>
+#include <migraphx/argument.hpp>
+#include <migraphx/reflect.hpp>
 #include <migraphx/op/batch_norm.hpp>
 
 namespace migraphx {

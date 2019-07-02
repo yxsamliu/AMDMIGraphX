@@ -3,6 +3,7 @@
 
 #include <migraphx/shape.hpp>
 #include <migraphx/op/pad.hpp>
+#include <migraphx/reflect.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

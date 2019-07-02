@@ -4,6 +4,7 @@
 #include <migraphx/shape.hpp>
 #include <migraphx/op/convolution.hpp>
 #include <migraphx/gpu/miopen.hpp>
+#include <migraphx/argument.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {

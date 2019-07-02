@@ -3,6 +3,7 @@
 
 #include <migraphx/check_shapes.hpp>
 #include <migraphx/par_dfor.hpp>
+#include <migraphx/argument.hpp>
 #include <migraphx/config.hpp>
 
 namespace migraphx {

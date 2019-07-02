@@ -2,6 +2,7 @@
 #define MIGRAPHX_GUARD_RTGLIB_TANH_HPP
 
 #include <migraphx/shape.hpp>
+#include <migraphx/argument.hpp>
 #include <migraphx/gpu/miopen.hpp>
 
 namespace migraphx {
