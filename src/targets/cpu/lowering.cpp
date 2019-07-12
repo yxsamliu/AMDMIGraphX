@@ -254,7 +254,7 @@ struct cpu_quant_convolution
                     const auto start_x  = i * op.stride[0] - op.padding[0];
                     const auto start_y  = j * op.stride[1] - op.padding[1];
                     const auto group_id = w / (wei_n / op.group);
-                    int32_t acc = 0;
+                    int32_t acc         = 0;
                     dfor(wei_c, wei_h, wei_w)([&](std::size_t k, std::size_t x, std::size_t y) {
                         const auto in_x  = start_x + x;
                         const auto in_y  = start_y + y;
