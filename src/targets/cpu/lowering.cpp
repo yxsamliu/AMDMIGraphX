@@ -2,7 +2,21 @@
 #include <migraphx/cpu/lowering.hpp>
 #include <migraphx/instruction.hpp>
 #include <migraphx/dfor.hpp>
-#include <migraphx/operators.hpp>
+#include <migraphx/op/batch_norm.hpp>
+#include <migraphx/op/convolution.hpp>
+#include <migraphx/op/quant_convolution.hpp>
+#include <migraphx/op/dot.hpp>
+#include <migraphx/op/quant_dot.hpp>
+#include <migraphx/op/elu.hpp>
+#include <migraphx/op/im2col.hpp>
+#include <migraphx/op/leaky_relu.hpp>
+#include <migraphx/op/logsoftmax.hpp>
+#include <migraphx/op/lrn.hpp>
+#include <migraphx/op/pad.hpp>
+#include <migraphx/op/pooling.hpp>
+#include <migraphx/op/softmax.hpp>
+#include <migraphx/op/argmax.hpp>
+#include <migraphx/op/argmin.hpp>
 #include <migraphx/shape_for_each.hpp>
 #include <migraphx/iterator_for.hpp>
 #include <migraphx/par_dfor.hpp>
@@ -220,7 +234,7 @@ struct cpu_quant_convolution
     argument compute(context&, shape output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
-        auto output = result.get<float>();
+        auto output = result.get<int32_t>();
         visit_all(args[0], args[1])([&](auto input, auto weights) {
             auto in   = input.get_shape().lens();
             auto in_h = in[2];
@@ -240,14 +254,15 @@ struct cpu_quant_convolution
                     const auto start_x  = i * op.stride[0] - op.padding[0];
                     const auto start_y  = j * op.stride[1] - op.padding[1];
                     const auto group_id = w / (wei_n / op.group);
-                    float acc           = 0;
+                    int32_t acc = 0;
                     dfor(wei_c, wei_h, wei_w)([&](std::size_t k, std::size_t x, std::size_t y) {
                         const auto in_x  = start_x + x;
                         const auto in_y  = start_y + y;
                         const auto in_ch = group_id * wei_c + k;
                         if(in_x >= 0 && in_x < in_h && in_y >= 0 && in_y < in_w)
                         {
-                            acc += input(o, in_ch, in_x, in_y) * weights(w, k, x, y);
+                            acc += static_cast<int32_t>(input(o, in_ch, in_x, in_y)) *
+                                   weights(w, k, x, y);
                         }
                     });
                     output(o, w, i, j) = acc;
@@ -562,8 +577,7 @@ struct cpu_quant_gemm
         }
 
         // 2 input arguments
-        int32_t beta = 0;
-        migemm(result, arg_0, arg_1, op.alpha, beta);
+        migemm(result, arg_0, arg_1, op.alpha, int32_t{0});
 
         return result;
     }
@@ -650,45 +664,45 @@ struct cpu_softmax
 
     std::string name() const { return "cpu::softmax"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
-
-    template <typename T>
-    std::size_t compute_batch_index(T idx, shape& batch_shape, int axis) const
-    {
-        idx.erase(idx.begin() + axis);
-        return batch_shape.index(idx);
-    }
-
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
-        auto batch_lens = output_shape.lens();
-        batch_lens.erase(batch_lens.begin() + op.axis);
+        auto batch_lens     = output_shape.lens();
+        std::size_t n_dims  = batch_lens[op.axis];
+        batch_lens[op.axis] = 1;
         shape batch_shape{shape::int32_type, batch_lens};
 
         visit_all(result, args[0])([&](auto output, auto input) {
             using value_type = typename decltype(input)::value_type;
             std::vector<value_type> batch_max(batch_shape.elements(),
                                               std::numeric_limits<value_type>::lowest());
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index       = this->compute_batch_index(idx, batch_shape, op.axis);
-                batch_max[index] = std::max(batch_max[index], input(idx.begin(), idx.end()));
-            });
-
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                output(idx.begin(), idx.end()) =
-                    std::exp(input(idx.begin(), idx.end()) - batch_max[index]);
-            });
-
             std::vector<value_type> batch_sum(batch_shape.elements(), value_type(0));
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                batch_sum[index] += output(idx.begin(), idx.end());
-            });
+            par_for(batch_shape.elements(), [&](auto i) {
+                auto idx = batch_shape.multi(i);
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    batch_max[i] = std::max(batch_max[i], input(idx.begin(), idx.end()));
+                }
 
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                output(idx.begin(), idx.end()) /= batch_sum[index];
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis]      = j;
+                    std::size_t index = output_shape.index(idx);
+                    output[index]     = std::exp(input[index] - batch_max[i]);
+                }
+
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    batch_sum[i] += output(idx.begin(), idx.end());
+                }
+
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    output(idx.begin(), idx.end()) /= batch_sum[i];
+                }
             });
         });
 
@@ -708,49 +722,50 @@ struct cpu_logsoftmax
 
     std::string name() const { return "cpu::logsoftmax"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
-
-    template <typename T>
-    std::size_t compute_batch_index(T idx, const shape& batch_shape, int axis) const
-    {
-        idx[axis] = 0;
-        return batch_shape.index(idx);
-    }
-
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
         auto batch_lens     = output_shape.lens();
+        std::size_t n_dims  = batch_lens[op.axis];
         batch_lens[op.axis] = 1;
         shape batch_shape{shape::int32_type, batch_lens};
 
+        // use a parallel implementation to acheive better performance
+        // one thread for one batch
         visit_all(result, args[0])([&](auto output, auto input) {
             using value_type = typename decltype(input)::value_type;
             std::vector<value_type> batch_max(batch_shape.elements(),
                                               std::numeric_limits<value_type>::lowest());
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index       = this->compute_batch_index(idx, batch_shape, op.axis);
-                batch_max[index] = std::max(batch_max[index], input(idx.begin(), idx.end()));
-            });
-
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                output(idx.begin(), idx.end()) = input(idx.begin(), idx.end()) - batch_max[index];
-            });
-
             std::vector<value_type> batch_sum(batch_shape.elements(), value_type(0));
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                batch_sum[index] += std::exp(output(idx.begin(), idx.end()));
-            });
 
-            for(std::size_t i = 0; i < batch_sum.size(); ++i)
-            {
+            par_for(batch_shape.elements(), [&](auto i) {
+                auto idx = batch_shape.multi(i);
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    batch_max[i] = std::max(batch_max[i], input(idx.begin(), idx.end()));
+                }
+
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis]      = j;
+                    std::size_t index = output_shape.index(idx);
+                    output[index]     = input[index] - batch_max[i];
+                }
+
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    batch_sum[i] += std::exp(output(idx.begin(), idx.end()));
+                }
+
                 batch_sum[i] = std::log(batch_sum[i]);
-            }
 
-            shape_for_each(output_shape, [&](auto idx) {
-                auto index = this->compute_batch_index(idx, batch_shape, op.axis);
-                output(idx.begin(), idx.end()) -= batch_sum[index];
+                for(std::size_t j = 0; j < n_dims; ++j)
+                {
+                    idx[op.axis] = j;
+                    output(idx.begin(), idx.end()) -= batch_sum[i];
+                }
             });
         });
 

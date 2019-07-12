@@ -1646,6 +1646,22 @@ struct test_pad : verify_program<test_pad>
     }
 };
 
+struct test_pad_int8 : verify_program<test_pad_int8>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        std::vector<int8_t> data0 = {0, 1, 2, 3};
+        migraphx::shape s0{migraphx::shape::float_type, {2, 2}};
+        auto l0 = p.add_literal(migraphx::literal{s0, data0});
+        migraphx::op::pad op{};
+        op.value = std::numeric_limits<int8_t>::lowest();
+        op.pads  = {0, 0, 1, 1};
+        p.add_instruction(op, l0);
+        return p;
+    }
+};
+
 struct test_pooling_autopad : verify_program<test_pooling_autopad>
 {
     migraphx::program create_program() const
@@ -2836,10 +2852,11 @@ struct test_lstm_forward_last : verify_program<test_lstm_forward_last>
         auto und  = p.add_instruction(migraphx::op::undefined{});
 
         auto output = p.add_instruction(
-            migraphx::op::gru{hidden_size,
-                              {migraphx::op::sigmoid{}, migraphx::op::tanh{}, migraphx::op::tanh{}},
-                              migraphx::op::rnn_direction::forward,
-                              clip},
+            migraphx::op::lstm{
+                hidden_size,
+                {migraphx::op::sigmoid{}, migraphx::op::tanh{}, migraphx::op::tanh{}},
+                migraphx::op::rnn_direction::forward,
+                clip},
             seq,
             w,
             r,
@@ -3610,6 +3627,78 @@ struct test_fp32_fp16_sub : verify_program<test_fp32_fp16_sub>
         p.add_instruction(migraphx::op::add{}, diff, p1);
         migraphx::quantize(p, {"sub"});
 
+        return p;
+    };
+};
+
+struct test_reduce_sum : verify_program<test_reduce_sum>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::float_type, {3, 1026, 4, 3}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_sum{{1}}, x);
+        return p;
+    };
+};
+
+struct test_reduce_sum_int : verify_program<test_reduce_sum_int>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::int32_type, {3, 4, 8, 8}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_sum{{1}}, x);
+        return p;
+    };
+};
+
+struct test_reduce_sum_half : verify_program<test_reduce_sum_half>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::half_type, {3, 4, 8, 8}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_sum{{1}}, x);
+        return p;
+    };
+};
+
+struct test_reduce_mean : verify_program<test_reduce_mean>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::float_type, {3, 9, 4, 3}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_mean{{1}}, x);
+        return p;
+    };
+};
+
+struct test_reduce_mean_int : verify_program<test_reduce_mean_int>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::int32_type, {3, 1024, 8, 8}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_mean{{1}}, x);
+        return p;
+    };
+};
+
+struct test_reduce_mean_half : verify_program<test_reduce_mean_half>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s{migraphx::shape::half_type, {3, 1024, 8, 8}};
+        auto x = p.add_parameter("x", s);
+        p.add_instruction(migraphx::op::reduce_mean{{2}}, x);
         return p;
     };
 };

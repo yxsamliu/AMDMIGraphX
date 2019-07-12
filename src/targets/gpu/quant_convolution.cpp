@@ -1,4 +1,5 @@
 #include <migraphx/gpu/quant_convolution.hpp>
+#include <migraphx/gpu/device/convert.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
 #include <iomanip>
@@ -70,6 +71,7 @@ argument miopen_quant_convolution::compute(context& ctx,
     {
         MIGRAPHX_THROW("QUANT_CONVOLUTION: run convolution forward failed");
     }
+
     return args[3];
 }
 

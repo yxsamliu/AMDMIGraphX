@@ -2,8 +2,8 @@
 #include <migraphx/gpu/device/pack.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
-#include <iomanip>
 #include <fstream>
+#include <iomanip>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -89,6 +89,7 @@ argument miopen_quant_gemm::compute(context& ctx,
     {
         device::pack_b(ctx.get_stream().get(), args[arg_num - 3], args[0]);
     }
+    device::sync_stream(ctx.get_stream().get());
 
     bool is_3inputs = (arg_num == 6);
     int32_t beta    = 0;
