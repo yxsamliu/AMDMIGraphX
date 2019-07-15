@@ -38,6 +38,7 @@ add_library(migraphx_device
     device/gather.cpp
     device/sub.cpp
     device/pack.cpp
+    device/div.cpp
     device/clip.cpp
     device/reduce_sum.cpp
     device/reduce_mean.cpp
