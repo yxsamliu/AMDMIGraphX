@@ -2,6 +2,7 @@
 #include <migraphx/gpu/device/pack.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
+#include <migraphx/time.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -74,17 +75,26 @@ argument miopen_quant_gemm::compute(context& ctx,
     rocblas_int lda = args[0].get_shape().strides()[transa ? dim_1 : dim_0];
     rocblas_int ldb = args[1].get_shape().strides()[transb ? dim_1 : dim_0];
     rocblas_int ldc = args[arg_num - 1].get_shape().strides()[dim_0];
+    ms_timer timer;
 
     if(!transb)
     {
+        timer.start();
         device::pack_a(ctx.get_stream().get(), args[arg_num - 2], args[1]);
+        hipStreamSynchronize(ctx.get_stream().get());
+        timer.end();
+        std::cout << "pack_b time = " << timer.get_ms() << " ms." << std::endl;
     }
 
     // need to pack A in this scenario, use the algorithm to pack B in the
     // comment of the API
     if(transa)
     {
+        timer.start();
         device::pack_b(ctx.get_stream().get(), args[arg_num - 3], args[0]);
+        hipStreamSynchronize(ctx.get_stream().get());
+        timer.end();
+        std::cout << "pack_a time = " << timer.get_ms() << " ms." << std::endl;
     }
 
     bool is_3inputs = (arg_num == 6);
@@ -94,6 +104,7 @@ argument miopen_quant_gemm::compute(context& ctx,
         beta = op.beta;
     }
 
+    timer.start();
     auto a_lens = args[0].get_shape().lens();
     auto b_lens = args[1].get_shape().lens();
     output_shape.visit_type([&](auto as) {
@@ -178,6 +189,8 @@ argument miopen_quant_gemm::compute(context& ctx,
                 nullptr);
         }
     });
+    timer.end();
+    std::cout << "gemm time = " << timer.get_ms() << " ms." << std::endl;
 
     return args[arg_num - 1];
 }

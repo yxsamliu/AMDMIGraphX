@@ -1,6 +1,7 @@
 #include <migraphx/gpu/gemm.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/gpu/device/add.hpp>
+#include <migraphx/time.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -193,6 +194,8 @@ argument miopen_gemm::compute(context& ctx,
         beta = op.beta;
     }
 
+    ms_timer timer;
+    timer.start(); 
     auto a_lens = args[0].get_shape().lens();
     auto b_lens = args[1].get_shape().lens();
     output_shape.visit_type([&](auto as) {
@@ -259,6 +262,8 @@ argument miopen_gemm::compute(context& ctx,
                 num_matrices);
         }
     });
+    timer.end(); 
+    std::cout << "gemm time = " << timer.get_ms() << " ms." << std::endl;
 
     return (is_3inputs ? args[3] : args[2]);
 }
