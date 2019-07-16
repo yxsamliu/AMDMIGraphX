@@ -195,7 +195,7 @@ argument miopen_gemm::compute(context& ctx,
     }
 
     ms_timer timer;
-    timer.start(); 
+    timer.start();
     auto a_lens = args[0].get_shape().lens();
     auto b_lens = args[1].get_shape().lens();
     output_shape.visit_type([&](auto as) {
@@ -262,7 +262,7 @@ argument miopen_gemm::compute(context& ctx,
                 num_matrices);
         }
     });
-    timer.end(); 
+    timer.end();
     std::cout << "gemm time = " << timer.get_ms() << " ms." << std::endl;
 
     return (is_3inputs ? args[3] : args[2]);
