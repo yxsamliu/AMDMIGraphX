@@ -154,6 +154,7 @@ struct tf_parser
         add_generic_op("Identity", op::identity{});
         add_generic_op("Relu", op::relu{});
         add_generic_op("Relu6", op::clip{6.0, 0.0});
+        add_generic_op("Rsqrt", op::rsqrt{});
         add_generic_op("Tanh", op::tanh{});
         add_generic_op("StopGradient", op::identity{});
 
@@ -163,6 +164,7 @@ struct tf_parser
         add_binary_op("Sub", op::sub{});
 
         add_mem_op("AvgPool", &tf_parser::parse_pooling);
+        add_mem_op("BatchMatMul", &tf_parser::parse_matmul, false);
         add_mem_op("BiasAdd", &tf_parser::parse_biasadd);
         add_mem_op("ConcatV2", &tf_parser::parse_concat, false);
         add_mem_op("Const", &tf_parser::parse_constant);
@@ -176,9 +178,10 @@ struct tf_parser
         add_mem_op("Pack", &tf_parser::parse_pack, false);
         add_mem_op("Pad", &tf_parser::parse_pad);
         add_mem_op("Reshape", &tf_parser::parse_reshape, false);
-        add_mem_op("Softmax", &tf_parser::parse_softmax);
+        add_mem_op("Softmax", &tf_parser::parse_softmax<op::softmax>);
         add_mem_op("Squeeze", &tf_parser::parse_squeeze, false);
         add_mem_op("StridedSlice", &tf_parser::parse_stridedslice);
+        add_mem_op("Transpose", &tf_parser::parse_transpose, false);
     }
 
     template <class F>
@@ -528,6 +531,15 @@ struct tf_parser
             transb = attributes.at("transpose_a").b();
         }
 
+        if(contains(attributes, "adj_x"))
+        {
+            transa = attributes.at("adj_x").b();
+        }
+        if(contains(attributes, "adj_y"))
+        {
+            transb = attributes.at("adj_y").b();
+        }
+
         std::vector<int64_t> perm(args[0]->get_shape().lens().size());
         std::iota(perm.begin(), perm.end(), int64_t{0});
         // swap the last two elements
@@ -703,17 +715,24 @@ struct tf_parser
         }
     }
 
+    // template to facilitate the logsoftmax later
+    template <class Op>
     instruction_ref parse_softmax(const std::string&,
                                   const attribute_map& attributes,
                                   std::vector<instruction_ref> args)
     {
-        int axis = 1;
+        int axis      = -1;
+        auto num_dims = args[0]->get_shape().lens().size();
         if(contains(attributes, "axis"))
         {
             axis = static_cast<int>(attributes.at("axis").i());
         }
+        if(axis < 0)
+        {
+            axis += num_dims;
+        }
 
-        return prog.add_instruction(op::softmax{axis}, std::move(args));
+        return prog.add_instruction(Op{axis}, make_contiguous(args[0]));
     }
 
     instruction_ref parse_squeeze(const std::string&,
@@ -767,6 +786,16 @@ struct tf_parser
 
         auto l0 = prog.add_instruction(op, make_contiguous(args[0]));
         return to_nhwc(prog.add_instruction(op::squeeze{squeeze_axes}, l0));
+    }
+
+    instruction_ref
+    parse_transpose(const std::string&, const attribute_map&, std::vector<instruction_ref> args)
+    {
+        auto perm = args[1]->eval().get<int32_t>().to_vector();
+        op::transpose op;
+        op.dims = std::vector<int64_t>(perm.begin(), perm.end());
+
+        return prog.add_instruction(op, args.front());
     }
 
     void parse_graph(const tensorflow::GraphDef& graph)
