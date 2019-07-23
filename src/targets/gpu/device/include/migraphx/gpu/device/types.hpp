@@ -24,7 +24,7 @@ namespace device {
 [[noreturn]] void assert_return();
 #define MIGRAPHX_DEVICE_ASSERT(...) (!(__VA_ARGS__)) ? assert_return() : (void)0; // NOLINT
 #else
-#define MIGRAPHX_DEVICE_ASSERT(...) 
+#define MIGRAPHX_DEVICE_ASSERT(...)
 #endif
 
 template <class T, std::size_t N>
