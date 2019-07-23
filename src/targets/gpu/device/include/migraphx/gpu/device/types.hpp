@@ -20,6 +20,13 @@ namespace device {
 
 #define MIGRAPHX_DEVICE_CONSTEXPR constexpr __device__ __host__ // NOLINT
 
+#ifdef MIGRAPHX_USE_CLANG_TIDY
+[[noreturn]] void assert_return();
+#define MIGRAPHX_DEVICE_ASSERT(...) (!(__VA_ARGS__)) ? assert_return() : (void)0; // NOLINT
+#else
+#define MIGRAPHX_DEVICE_ASSERT(...) 
+#endif
+
 template <class T, std::size_t N>
 using vec = T __attribute__((ext_vector_type(N)));
 

@@ -45,10 +45,26 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(EnableCompilerWarnings)
 include(ROCMClangTidy)
 rocm_enable_clang_tidy(
+    ENABLE_ALPHA_CHECKS
     CHECKS
         *
+        # Disable all alpha checks by default
+        -clang-analyzer-alpha*
+        # Enable some alpha checks
+        clang-analyzer-alpha.core.CallAndMessageUnInitRefArg
+        clang-analyzer-alpha.core.Conversion
+        clang-analyzer-alpha.core.IdenticalExpr
+        clang-analyzer-alpha.core.PointerArithm
+        clang-analyzer-alpha.core.PointerSub
+        clang-analyzer-alpha.core.TestAfterDivZero
+        clang-analyzer-alpha.cplusplus.InvalidIterator
+        clang-analyzer-alpha.cplusplus.IteratorRange
+        clang-analyzer-alpha.cplusplus.MismatchedIterator
+        clang-analyzer-alpha.cplusplus.MisusedMovedObject
+        clang-analyzer-alpha.security.*
+        -clang-analyzer-alpha.security.ArrayBound
+        -clang-analyzer-alpha.security.ArrayBoundV2
         -android-cloexec-fopen
-        -clang-analyzer-alpha.core.CastToStruct
         -clang-analyzer-optin.performance.Padding
         -clang-diagnostic-deprecated-declarations
         -clang-diagnostic-extern-c-compat
@@ -103,6 +119,10 @@ rocm_enable_clang_tidy(
     EXTRA_ARGS
         -DMIGRAPHX_USE_CLANG_TIDY
         "-Dmain\\\\(...\\\\)=main\\\\(__VA_ARGS__\\\\) // NOLINT"
+    CLANG_ARGS
+        -analyzer-max-loop 10
+        -analyzer-inline-max-stack-depth 10
+        -analyzer-config optin.cplusplus.UninitializedObject:Pedantic=true
 
 )
 include(ROCMCppCheck)
