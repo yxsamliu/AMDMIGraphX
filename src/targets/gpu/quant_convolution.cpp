@@ -119,7 +119,7 @@ shape miopen_quant_convolution::pack_int8_shape(const shape& s) const
     lens[1]      = (lens[1] + 3) / 4 * 4;
     strides[0]   = strides[1] * lens[1];
 
-    return {s.type(), lens};
+    return {s.type(), lens, strides};
 }
 
 } // namespace gpu
