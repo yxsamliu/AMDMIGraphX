@@ -37,15 +37,17 @@ add_library(migraphx_device
     device/pad.cpp
     device/gather.cpp
     device/sub.cpp
-    device/pack.cpp
+    device/int8_gemm_pack.cpp
     device/div.cpp
     device/clip.cpp
     device/reduce_sum.cpp
     device/rsqrt.cpp
+    device/round.cpp
     device/sqrt.cpp
     device/reduce_mean.cpp
     device/pow.cpp
     device/sqdiff.cpp
+    device/sign.cpp
 )
 set_target_properties(migraphx_device PROPERTIES EXPORT_NAME device)
 rocm_clang_tidy_check(migraphx_device)
@@ -85,9 +87,12 @@ add_library(migraphx_gpu
     lrn.cpp
     schedule_model.cpp
     adjust_allocation.cpp
+    pack_int8_args.cpp
     clip.cpp
     reduce_sum.cpp
     reduce_mean.cpp
+    int8_gemm_pack.cpp
+    int8_conv_pack.cpp
 )
 set_target_properties(migraphx_gpu PROPERTIES EXPORT_NAME gpu)
 rocm_clang_tidy_check(migraphx_gpu)
