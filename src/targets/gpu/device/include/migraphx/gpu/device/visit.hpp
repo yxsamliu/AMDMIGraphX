@@ -102,14 +102,13 @@ struct hip_convert
         return make_hip_shape<ndim>(s);
     }
 
-    template<class T, std::size_t Size, class N, class As>
+    template <class T, std::size_t Size, class N, class As>
     auto operator()(const hip_array<T, Size>& arr, N ndim, As as) const
     {
         using type = decltype((*this)(arr.front(), ndim, as));
         hip_array<type, Size> result;
-        std::transform(arr.begin(), arr.end(), result.begin(), [&](auto x) {
-            return (*this)(x, ndim, as);
-        });
+        std::transform(
+            arr.begin(), arr.end(), result.begin(), [&](auto x) { return (*this)(x, ndim, as); });
         return result;
     }
 };

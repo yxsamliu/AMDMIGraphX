@@ -20,7 +20,7 @@ struct hip_array
     MIGRAPHX_DEVICE_CONSTEXPR const T& front() const { return d[0]; }
 
     MIGRAPHX_DEVICE_CONSTEXPR T& back() { return d[N - 1]; }
-    MIGRAPHX_DEVICE_CONSTEXPR const T& back() const { return d[N -1]; }
+    MIGRAPHX_DEVICE_CONSTEXPR const T& back() const { return d[N - 1]; }
 
     MIGRAPHX_DEVICE_CONSTEXPR T* data() { return d; }
     MIGRAPHX_DEVICE_CONSTEXPR const T* data() const { return d; }

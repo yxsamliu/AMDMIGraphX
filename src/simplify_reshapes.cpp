@@ -220,12 +220,12 @@ struct find_nested_concat
 
     void apply(program& p, const match::matcher_result& mr) const
     {
-        auto ins = mr.result;
+        auto ins  = mr.result;
         auto axis = get_axis(ins);
         std::vector<instruction_ref> args;
-        for(auto&& i:ins->inputs())
+        for(auto&& i : ins->inputs())
         {
-            if (i->name() == "concat" and get_axis(i) == axis)
+            if(i->name() == "concat" and get_axis(i) == axis)
                 args.insert(args.end(), i->inputs().begin(), i->inputs().end());
             else
                 args.push_back(i);
