@@ -9,6 +9,9 @@ inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 namespace device {
 
+template <class T, std::size_t N>
+struct hip_array;
+
 template <class F>
 void visit_tensor_size(std::size_t n, F f)
 {
@@ -51,6 +54,12 @@ auto get_shape(const T& x) -> decltype(x.get_shape())
     return x.get_shape();
 }
 
+template <class T, std::size_t Size>
+auto get_shape(const hip_array<T, Size>& arr)
+{
+    return get_shape(arr.front());
+}
+
 template <class V, class F, class... Ts>
 void hip_visit_all_impl(const shape& s, F f, V&& v, Ts&&... xs)
 {
@@ -91,6 +100,17 @@ struct hip_convert
     auto operator()(const shape& s, N ndim, As) const
     {
         return make_hip_shape<ndim>(s);
+    }
+
+    template<class T, std::size_t Size, class N, class As>
+    auto operator()(const hip_array<T, Size>& arr, N ndim, As as) const
+    {
+        using type = decltype((*this)(arr.front(), ndim, as));
+        hip_array<type, Size> result;
+        std::transform(arr.begin(), arr.end(), result.begin(), [&](auto x) {
+            return (*this)(x, ndim, as);
+        });
+        return result;
     }
 };
 
