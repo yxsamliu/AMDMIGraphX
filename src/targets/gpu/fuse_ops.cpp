@@ -139,7 +139,8 @@ MIGRAPHX_PRED_MATCHER(fusable_conv, instruction_ref ins)
         return false;
     auto op = conv.op;
     return contains({{0, 0}, {1, 1}, {2, 2}, {3, 3}}, op.padding) and
-           contains({{0, 0}, {1, 1}, {2, 2}}, op.stride) and op.dilation == make_array<size_t>(1, 1);
+           contains({{0, 0}, {1, 1}, {2, 2}}, op.stride) and
+           op.dilation == make_array<size_t>(1, 1);
 }
 
 struct hip_triadd
