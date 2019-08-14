@@ -32,11 +32,11 @@ struct capture
 
     argument compute(const shape&, std::vector<argument> args) const
     {
-        if (f)
+        if(f)
         {
             f(ins_index, args);
         }
-       
+
         return args.front();
     }
 };

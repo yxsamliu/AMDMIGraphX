@@ -100,12 +100,12 @@ argument rocblas_quant_gemm::compute(context& ctx,
     auto a_lens = args[0].get_shape().lens();
     auto b_lens = args[1].get_shape().lens();
     output_shape.visit_type([&](auto as) {
-        auto alpha_r    = to_rocblas_type(as(op.alpha));
-        auto beta_r     = to_rocblas_type(as(beta));
-        auto out_lens   = output_shape.lens();
-        rocblas_int m   = out_lens[dim_0];
-        rocblas_int n   = out_lens[dim_1];
-        rocblas_int k   = args[0].get_shape().lens()[dim_1];
+        auto alpha_r  = to_rocblas_type(as(op.alpha));
+        auto beta_r   = to_rocblas_type(as(beta));
+        auto out_lens = output_shape.lens();
+        rocblas_int m = out_lens[dim_0];
+        rocblas_int n = out_lens[dim_1];
+        rocblas_int k = args[0].get_shape().lens()[dim_1];
 
         auto to_pointer = [&](auto&& arg) { return to_rocblas_type(as.from(arg.data())); };
         assert(k % 4 == 0);
