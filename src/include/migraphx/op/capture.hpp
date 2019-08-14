@@ -36,6 +36,10 @@ struct capture
         {
             f(ins_index, args);
         }
+        else
+        {
+            MIGRAPHX_THROW("CAPTURE: callback function is not callable!");
+        }
 
         return args.front();
     }
