@@ -82,6 +82,7 @@ std::vector<T> generate_tensor_data(const migraphx::shape& s, unsigned long seed
 {
     std::vector<T> result(s.elements());
     std::generate(result.begin(), result.end(), xorshf96_generator<T>{seed});
+    std::transform(result.begin(), result.end(), result.begin(), [](auto i) { return i / 32; });
     // std::generate(result.begin(), result.end(), [&]{ return seed % 7; });
     // std::generate(result.begin(), result.end(), []{ return 1; });
     return result;

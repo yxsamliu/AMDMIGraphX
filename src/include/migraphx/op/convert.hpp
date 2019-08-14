@@ -35,7 +35,10 @@ struct convert : unary<convert>
 
     auto apply() const
     {
-        return [](auto x) { return x; };
+        return [](auto x) 
+        {
+            return x; 
+        };
     }
 
     convert(shape::type_t t) : target_type{t} {}

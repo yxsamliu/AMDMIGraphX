@@ -1,8 +1,6 @@
 #include <migraphx/gpu/quant_gemm.hpp>
 #include <migraphx/gpu/context.hpp>
 #include <migraphx/generate.hpp>
-#include <fstream>
-#include <iomanip>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -108,6 +106,7 @@ argument rocblas_quant_gemm::compute(context& ctx,
         rocblas_int m   = out_lens[dim_0];
         rocblas_int n   = out_lens[dim_1];
         rocblas_int k   = args[0].get_shape().lens()[dim_1];
+
         auto to_pointer = [&](auto&& arg) { return to_rocblas_type(as.from(arg.data())); };
         assert(k % 4 == 0);
 
