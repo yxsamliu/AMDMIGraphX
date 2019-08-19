@@ -181,6 +181,7 @@ struct tf_parser
         add_mem_op("Pack", &tf_parser::parse_pack, false);
         add_mem_op("Pad", &tf_parser::parse_pad);
         add_mem_op("Reshape", &tf_parser::parse_reshape, false);
+        add_mem_op("Slice", &tf_parser::parse_slice, false);
         add_mem_op("Softmax", &tf_parser::parse_softmax<op::softmax>);
         add_mem_op("Squeeze", &tf_parser::parse_squeeze, false);
         add_mem_op("StridedSlice", &tf_parser::parse_stridedslice);
@@ -573,23 +574,18 @@ struct tf_parser
     parse_mean(const std::string&, attribute_map attributes, std::vector<instruction_ref> args)
     {
         bool keep_dims = attributes.at("keep_dims").b();
-        std::vector<int32_t> hw_axes{2, 3};
-        // check if conditions for GlobalAvgPool are met
-        auto lens = args[0]->get_shape().lens();
-        auto axes = parse_axes(args[1]->eval().get<int32_t>().to_vector(), lens.size());
+        auto lens      = args[0]->get_shape().lens();
+        auto axes = parse_axes(args[1]->eval().get<int32_t>().to_vector<int64_t>(), lens.size());
 
-        if(axes == hw_axes and lens.size() == 4)
+        if(keep_dims)
         {
-            op::pooling op{"average"};
-            op.lengths[0] = lens[2];
-            op.lengths[1] = lens[3];
-            auto l0       = prog.add_instruction(op, args.front());
-            if(keep_dims)
-                return l0;
-            return prog.add_instruction(
-                op::squeeze{std::vector<int64_t>(hw_axes.begin(), hw_axes.end())}, l0);
+            return prog.add_instruction(op::reduce_mean{axes}, args[0]);
         }
-        MIGRAPHX_THROW("MIGraphX does not support mean outside of GlobalAvgPool transformation");
+        else
+        {
+            auto ins = prog.add_instruction(op::reduce_mean{axes}, args[0]);
+            return prog.add_instruction(op::squeeze{axes}, ins);
+        }
     }
 
     instruction_ref parse_pack(const std::string&,
@@ -731,6 +727,29 @@ struct tf_parser
         {
             throw std::runtime_error("Failed reading tf file");
         }
+    }
+
+    instruction_ref
+    parse_slice(const std::string&, const attribute_map&, std::vector<instruction_ref> args)
+    {
+        op::slice op;
+        auto starts     = args[1]->eval().get<int32_t>().to_vector();
+        auto size       = args[2]->eval().get<int32_t>().to_vector();
+        auto axes       = args[0]->get_shape().lens();
+        size_t num_axes = axes.size();
+
+        op.starts = std::vector<int64_t>(starts.begin(), starts.end());
+        op.ends   = std::vector<int64_t>(num_axes);
+        op.axes   = std::vector<int64_t>(num_axes);
+        std::iota(op.axes.begin(), op.axes.end(), 0);
+        for(size_t i = 0; i < num_axes; i++)
+        {
+            if(size[i] == -1)
+                op.ends[i] = axes[i];
+            else
+                op.ends[i] = starts[i] + size[i];
+        }
+        return prog.add_instruction(op, make_contiguous(args[0]));
     }
 
     // template to facilitate the logsoftmax later

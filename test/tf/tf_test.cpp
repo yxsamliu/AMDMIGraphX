@@ -257,8 +257,7 @@ TEST_CASE(mean_test)
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {1, 3, 16, 16}});
     p.add_literal(l);
     p.add_literal(l);
-    migraphx::op::pooling op;
-    op.lengths = {16, 16};
+    migraphx::op::reduce_mean op{{2, 3}};
     p.add_instruction(op, l0);
     auto l3 = p.add_instruction(op, l0);
     p.add_instruction(migraphx::op::squeeze{{2, 3}}, l3);
@@ -272,9 +271,8 @@ TEST_CASE(mean_test_nhwc)
     migraphx::program p;
     migraphx::literal l{migraphx::shape{migraphx::shape::int32_type, {2}}, {1, 2}};
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {1, 3, 16, 16}});
-    migraphx::op::pooling op;
-    op.lengths = {16, 16};
-    auto l3    = p.add_instruction(op, l0);
+    migraphx::op::reduce_mean op{{2, 3}};
+    auto l3 = p.add_instruction(op, l0);
     p.add_instruction(migraphx::op::squeeze{{2, 3}}, l3);
     auto prog = optimize_tf("mean_test_nhwc.pb", true);
 
@@ -408,6 +406,26 @@ TEST_CASE(rsqrt_test)
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {1, 3, 16, 16}});
     p.add_instruction(migraphx::op::rsqrt{}, l0);
     auto prog = optimize_tf("rsqrt_test.pb", false);
+
+    EXPECT(p == prog);
+}
+
+TEST_CASE(slice_test)
+{
+    migraphx::program p;
+    std::size_t num_axes = 2;
+    auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {5, 10}});
+    migraphx::shape s0{migraphx::shape::int32_type, {num_axes}};
+    p.add_literal(migraphx::literal{s0, {1, 0}});
+    p.add_literal(migraphx::literal{s0, {2, -1}});
+
+    migraphx::op::slice op;
+    op.starts = {1, 0};
+    op.ends   = {3, 10};
+    op.axes   = std::vector<int64_t>(num_axes);
+    std::iota(op.axes.begin(), op.axes.end(), 0);
+    p.add_instruction(op, l0);
+    auto prog = optimize_tf("slice_test.pb", false);
 
     EXPECT(p == prog);
 }
