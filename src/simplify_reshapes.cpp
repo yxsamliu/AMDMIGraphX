@@ -129,6 +129,7 @@ struct find_nop_reshapes
         auto reshapes = reshaper_names();
         reshapes.insert("transpose");
         reshapes.insert("slice");
+        reshapes.insert("multibroadcast");
         return match::name(reshapes)(match::same_shape(match::arg(0)));
     }
 

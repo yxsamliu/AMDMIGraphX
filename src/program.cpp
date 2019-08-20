@@ -193,6 +193,7 @@ instruction_ref program::replace_instruction(instruction_ref ins, instruction_re
     assert(has_instruction(ins));
     assert(has_instruction(rep));
     assert(ins != rep);
+    assert((std::distance(begin(), ins) + 1) >= std::distance(begin(), rep));
 
     if(ins == std::prev(this->end()))
     {

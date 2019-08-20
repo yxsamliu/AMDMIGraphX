@@ -3,6 +3,7 @@
 #include <migraphx/program.hpp>
 #include <migraphx/op/add.hpp>
 #include <migraphx/op/mul.hpp>
+#include <migraphx/op/sub.hpp>
 #include <migraphx/op/broadcast.hpp>
 #include <migraphx/matcher.hpp>
 #include <migraphx/literal.hpp>
@@ -52,30 +53,31 @@ struct find_mul_conv
     }
 };
 
-struct find_mul_add
+struct find_mul_inner
 {
     auto matcher() const
     {
         return match::name("mul")(match::either_arg(0, 1)(
-            match::name("add")(
+            match::name("add", "mul", "sub", "div")(
                 match::either_arg(0, 1)(
                     match::any().bind("x"),
                     match::any_of(conv_const_weights(), match::is_constant()).bind("y")),
                 match::none_of(match::args(match::is_constant(), match::is_constant())),
-                match::used_once()),
+                match::used_once()).bind("inner"),
             match::is_constant().bind("a")));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
         auto ins   = r.result;
+        auto inner_ins = r.instructions["inner"];
         auto a_ins = r.instructions["a"];
         auto x_ins = r.instructions["x"];
         auto y_ins = r.instructions["y"];
 
         auto xa_ins = p.insert_instruction(ins, op::mul{}, x_ins, a_ins);
         auto ya_ins = p.insert_instruction(ins, op::mul{}, y_ins, a_ins);
-        p.replace_instruction(ins, op::add{}, xa_ins, ya_ins);
+        p.replace_instruction(ins, inner_ins->get_operator(), xa_ins, ya_ins);
     }
 };
 
@@ -96,6 +98,67 @@ struct find_add_lit_broadcast
 
         auto sumab = p.insert_instruction(ins, op::add{}, a_ins, b_ins);
         p.replace_instruction(ins, op::add{}, x_ins, sumab);
+    }
+};
+
+struct find_add_sub_lit_broadcast
+{
+    auto matcher() const
+    {
+        return match::name("add")(
+            match::either_arg(0, 1)(op_lit_broadcast("sub", "a", "x").bind("sub"), lit_broadcast().bind("b")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+        auto sub_ins = r.instructions["sub"];
+        auto x_ins = r.instructions["x"];
+        auto a_ins = r.instructions["a"];
+        auto b_ins = r.instructions["b"];
+
+        // (x - a) + b => x + (b - a)
+        if (x_ins == sub_ins->inputs().front())
+        {
+            auto subab = p.insert_instruction(ins, op::sub{}, b_ins, a_ins);
+            p.replace_instruction(ins, op::add{}, x_ins, subab);
+        }
+        // (a - x) + b => (a + b) - x
+        else
+        {
+            auto sumab = p.insert_instruction(ins, op::add{}, a_ins, b_ins);
+            p.replace_instruction(ins, op::sub{}, x_ins, sumab);
+        }
+    }
+};
+
+struct find_sub_add_lit_broadcast
+{
+    auto matcher() const
+    {
+        return match::name("sub")(
+            match::either_arg(0, 1)(op_lit_broadcast("add", "a", "x"), lit_broadcast().bind("b")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+        auto x_ins = r.instructions["x"];
+        auto a_ins = r.instructions["a"];
+        auto b_ins = r.instructions["b"];
+
+        // (x + a) - b => x + (a - b)
+        if (b_ins == ins->inputs().back())
+        {
+            auto subab = p.insert_instruction(ins, op::sub{}, a_ins, b_ins);
+            p.replace_instruction(ins, op::add{}, x_ins, subab);
+        }
+        // b - (x + a) => (b - a) - x
+        else
+        {
+            auto subba = p.insert_instruction(ins, op::sub{}, b_ins, a_ins);
+            p.replace_instruction(ins, op::sub{}, subba, x_ins);
+        }
     }
 };
 
@@ -136,6 +199,27 @@ struct find_double_add_lit_broadcast
     }
 };
 
+struct find_inner_add_lit_broadcast
+{
+    auto matcher() const
+    {
+        return match::name("add")(
+            match::either_arg(0, 1)(op_lit_broadcast("add", "a", "x"), match::name("add")(match::args(not_lit_broadcast(), not_lit_broadcast())).bind("add")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+        auto a_ins = r.instructions["a"];
+        auto x_ins = r.instructions["x"];
+        auto add_ins = r.instructions["add"];
+
+        // (a + x) + (y + z) => a + (x + (y + z))
+        auto sumx = p.insert_instruction(ins, op::add{}, x_ins, add_ins);
+        p.replace_instruction(ins, op::add{}, sumx, a_ins);
+    }
+};
+
 struct find_inner_broadcast
 {
     auto matcher() const
@@ -171,8 +255,11 @@ void simplify_algebra::apply(program& p) const
                             find_inner_broadcast{},
                             find_double_add_lit_broadcast{},
                             find_add_lit_broadcast{},
+                            find_add_sub_lit_broadcast{},
+                            find_sub_add_lit_broadcast{},
+                            find_inner_add_lit_broadcast{},
                             find_mul_conv{},
-                            find_mul_add{});
+                            find_mul_inner{});
         dead_code_elimination{}.apply(p);
     }
 }

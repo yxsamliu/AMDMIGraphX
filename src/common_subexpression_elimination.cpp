@@ -27,7 +27,11 @@ void cse_range(program& p, Range&& r)
             if(*eq != *ins)
                 continue;
             p.replace_instruction(ins, eq);
-            cse_range(p, eq->outputs());
+            auto outputs = eq->outputs();
+            std::sort(outputs.begin(), outputs.end(), [&](auto x, auto y) {
+                return std::distance(eq, x) < std::distance(eq, y);
+            });
+            cse_range(p, outputs);
         }
         instructions.emplace(ins->name(), ins);
     }
