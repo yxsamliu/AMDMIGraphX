@@ -183,10 +183,12 @@ struct hip_triadd_relu
 };
 
 struct hip_add_relu : binary_device<hip_add_relu, &device::add_relu>
-{};
+{
+};
 
 struct hip_add_sqrt : binary_device<hip_add_sqrt, &device::add_sqrt>
-{};
+{
+};
 
 struct hip_mul_add
 {
