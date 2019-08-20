@@ -12,6 +12,7 @@ endif()
 
 add_library(migraphx_device
     device/add.cpp
+    device/add_sqrt.cpp
     device/argmax.cpp
     device/argmin.cpp
     device/max.cpp

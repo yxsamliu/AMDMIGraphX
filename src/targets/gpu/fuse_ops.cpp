@@ -4,7 +4,9 @@
 #include <migraphx/gpu/convolution.hpp>
 #include <migraphx/gpu/device/mul_add.hpp>
 #include <migraphx/gpu/device/add_relu.hpp>
+#include <migraphx/gpu/device/add_sqrt.hpp>
 #include <migraphx/gpu/device/add.hpp>
+#include <migraphx/gpu/oper.hpp>
 #include <migraphx/instruction.hpp>
 #include <migraphx/array.hpp>
 
@@ -180,24 +182,11 @@ struct hip_triadd_relu
     }
 };
 
-struct hip_add_relu
-{
-    std::string name() const { return "hip::add_relu"; }
-    shape compute_shape(const std::vector<shape>& inputs) const
-    {
-        check_shapes{inputs, *this}.has(3);
-        return inputs.front();
-    }
-    argument compute(context& ctx, const shape&, const std::vector<argument>& args) const
-    {
-        device::add_relu(ctx.get_stream().get(), args.at(2), args.at(0), args.at(1));
-        return args.at(2);
-    }
-    std::ptrdiff_t output_alias(const std::vector<shape>& shapes) const
-    {
-        return shapes.size() - 1;
-    }
-};
+struct hip_add_relu : binary_device<hip_add_relu, &device::add_relu>
+{};
+
+struct hip_add_sqrt : binary_device<hip_add_sqrt, &device::add_sqrt>
+{};
 
 struct hip_mul_add
 {
@@ -285,6 +274,34 @@ struct find_add_relu
             p.replace_instruction(ins, hip_add_relu{}, args);
         else if(add_ins->name() == "hip::triadd")
             p.replace_instruction(ins, hip_triadd_relu{}, args);
+    }
+};
+
+struct find_add_activation
+{
+    std::string op_name;
+    operation op;
+    auto matcher() const
+    {
+        return match::name(op_name)(match::arg(0)(
+            match::used_once(),
+            match::any_of(match::name("gpu::add"),
+                          match::any_of(match::name("@literal"),
+                                        match::any_of[match::inputs()](match::standard_shape())))
+                .bind("add")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto add_ins = r.instructions["add"];
+        auto ins     = r.result;
+        auto args    = add_ins->inputs();
+        move_standard_front(args);
+        move_broadcasted_back(args);
+
+        // Use the allocation from the activation operator
+        args.back() = ins->inputs().back();
+        p.replace_instruction(ins, op, args);
     }
 };
 
@@ -521,7 +538,8 @@ void fuse_ops::apply(program& p) const
         find_conv_bias{ctx},
         find_mul_add{},
         find_mul_add_relu{},
-        find_add_relu{}
+        find_add_relu{},
+        find_add_activation{"gpu::sqrt", hip_add_sqrt{}}
     );
     // clang-format on
 }
