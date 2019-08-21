@@ -9,6 +9,7 @@
 
 #include <migraphx/pass_manager.hpp>
 #include <migraphx/generate.hpp>
+#include <migraphx/quantization.hpp>
 #include <migraphx/dead_code_elimination.hpp>
 #include <migraphx/eliminate_identity.hpp>
 #include <migraphx/eliminate_pad.hpp>
@@ -81,18 +82,22 @@ struct compiler
 {
     loader l;
     bool gpu = true;
+    bool fp16 = false;
     std::vector<std::string> fill1;
     void parse(argument_parser& ap)
     {
         l.parse(ap);
         ap(gpu, {"--gpu"}, ap.help("Compile on the gpu"), ap.set_value(true));
         ap(gpu, {"--cpu"}, ap.help("Compile on the cpu"), ap.set_value(false));
+        ap(fp16, {"--fp16"}, ap.help("Fp16 quantization"), ap.set_value(true));
         ap(fill1, {"--fill1"}, ap.help("Fill parameter with 1s"), ap.append());
     }
 
     program compile()
     {
         auto p = l.load();
+        if (fp16)
+            quantize(p);
         compile_program(p, gpu);
         return p;
     }
