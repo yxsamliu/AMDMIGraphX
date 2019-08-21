@@ -483,6 +483,16 @@ struct onnx_parser
         return prog.add_instruction(op, std::move(args));
     }
 
+    instruction_ref make_contiguous(instruction_ref ins)
+    {
+        if (ins->get_shape().standard())
+        {
+            return ins;
+        }
+
+        return prog.add_instruction(op::contiguous{}, ins);
+    }
+
     instruction_ref
     parse_gather(const std::string&, attribute_map attributes, std::vector<instruction_ref> args)
     {
@@ -492,7 +502,7 @@ struct onnx_parser
             axis = parse_value(attributes.at("axis")).at<int>();
         }
         op::gather op{axis};
-        return prog.add_instruction(op, std::move(args));
+        return prog.add_instruction(op, make_contiguous(args[0]), make_contiguous(args[1]));
     }
 
     instruction_ref

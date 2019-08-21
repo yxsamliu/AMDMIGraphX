@@ -55,8 +55,10 @@ instruction_ref insert_quant_ins(program& prog,
                 float_ins =
                     prog.insert_instruction(insert_loc, op::convert{shape::float_type}, scaled_ins);
             }
-            std::vector<float> vec_scale(scaled_ins->get_shape().elements(), scale);
-            auto l_scale = prog.add_literal(literal(scaled_ins->get_shape(), vec_scale));
+            auto scaled_shape = scaled_ins->get_shape();
+            shape std_scaled_shape{scaled_shape.type(), scaled_shape.lens()};
+            std::vector<float> vec_scale(std_scaled_shape.elements(), scale);
+            auto l_scale = prog.add_literal(literal(std_scaled_shape, vec_scale));
             scaled_ins   = prog.insert_instruction(insert_loc, op::mul{}, l_scale, float_ins);
         }
 
@@ -69,8 +71,10 @@ instruction_ref insert_quant_ins(program& prog,
                 float_ins = prog.insert_instruction(
                     insert_loc, op::convert{shape::float_type}, shifted_ins);
             }
-            std::vector<float> vec_shift(shifted_ins->get_shape().elements(), shift);
-            auto l_shift = prog.add_literal(literal(shifted_ins->get_shape(), vec_shift));
+            auto shifted_shape = shifted_ins->get_shape();
+            shape std_shifted_shape{shifted_shape.type(), shifted_shape.lens()};
+            std::vector<float> vec_shift(std_shifted_shape.elements(), shift);
+            auto l_shift = prog.add_literal(literal(std_shifted_shape, vec_shift));
             shifted_ins  = prog.insert_instruction(insert_loc, op::add{}, l_shift, float_ins);
         }
 
@@ -118,7 +122,7 @@ void quantize(program& prog, const std::vector<std::string>& ins_names)
                 // if the input is a convert operator, uses its input
                 // as its current input
                 instruction_ref input_fp16{};
-                if(input->name() == "convert")
+                if(input->name() == "convert" and input->inputs().front()->get_shape().type() == shape::half_type)
                 {
                     input_fp16 = input->inputs().front();
                 }
