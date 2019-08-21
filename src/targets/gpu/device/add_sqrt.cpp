@@ -12,8 +12,7 @@ void add_sqrt(hipStream_t stream,
               const argument& arg1,
               const argument& arg2)
 {
-    nary(stream, result, arg1, arg2)(
-        [](auto x, auto y) { return ::sqrt(to_hip_type(x + y)); });
+    nary(stream, result, arg1, arg2)([](auto x, auto y) { return ::sqrt(to_hip_type(x + y)); });
 }
 
 } // namespace device
