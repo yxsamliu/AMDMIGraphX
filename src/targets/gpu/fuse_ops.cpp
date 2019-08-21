@@ -195,32 +195,29 @@ struct hip_bert : unary_device<hip_bert, &device::bert>
 {
 };
 
-
 // m = x - mean(x)
 // sqrt(mean(m ^ 2) + 1e-12) / m
 struct find_bert
 {
-    template<class... Ts>
+    template <class... Ts>
     static auto multibroadcast_op(Ts... xs)
     {
         return match::name("multibroadcast")(match::arg(0)(xs...));
     }
     auto matcher() const
     {
-        return match::name("gpu::div")(match::arg(0)(
-            match::name("gpu::sub")(
-                match::arg(0)(match::any().bind("x")), 
-                match::arg(1)(multibroadcast_op(match::name("gpu::reduce_mean")))
-            )), 
-            match::arg(1)(multibroadcast_op())
-        );
+        return match::name("gpu::div")(
+            match::arg(0)(match::name("gpu::sub")(
+                match::arg(0)(match::any().bind("x")),
+                match::arg(1)(multibroadcast_op(match::name("gpu::reduce_mean"))))),
+            match::arg(1)(multibroadcast_op()));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins       = r.result;
-        auto x_ins   = r.instructions["x"];
-        auto args      = ins->inputs();
+        auto ins   = r.result;
+        auto x_ins = r.instructions["x"];
+        auto args  = ins->inputs();
 
         p.replace_instruction(ins, hip_bert{}, x_ins, args.back());
     }
