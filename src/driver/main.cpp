@@ -81,7 +81,7 @@ struct loader
 struct compiler
 {
     loader l;
-    bool gpu = true;
+    bool gpu  = true;
     bool fp16 = false;
     std::vector<std::string> fill1;
     void parse(argument_parser& ap)
@@ -96,7 +96,7 @@ struct compiler
     program compile()
     {
         auto p = l.load();
-        if (fp16)
+        if(fp16)
             quantize(p);
         compile_program(p, gpu);
         return p;
