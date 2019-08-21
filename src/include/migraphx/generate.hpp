@@ -81,7 +81,7 @@ template <class T>
 std::vector<T> generate_tensor_data(const migraphx::shape& s, unsigned long seed = 0)
 {
     std::vector<T> result(s.elements());
-    if (s.type() == shape::int64_type or s.type() == shape::int32_type)
+    if(s.type() == shape::int64_type or s.type() == shape::int32_type)
     {
         std::generate(result.begin(), result.end(), [] { return 1; });
     }
