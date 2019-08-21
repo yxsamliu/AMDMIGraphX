@@ -6,6 +6,7 @@
 #include <migraphx/gpu/device/add_relu.hpp>
 #include <migraphx/gpu/device/add_sqrt.hpp>
 #include <migraphx/gpu/device/add.hpp>
+#include <migraphx/gpu/device/bert.hpp>
 #include <migraphx/gpu/oper.hpp>
 #include <migraphx/instruction.hpp>
 #include <migraphx/array.hpp>
@@ -188,6 +189,41 @@ struct hip_add_relu : binary_device<hip_add_relu, &device::add_relu>
 
 struct hip_add_sqrt : binary_device<hip_add_sqrt, &device::add_sqrt>
 {
+};
+
+struct hip_bert : unary_device<hip_bert, &device::bert>
+{
+};
+
+
+// m = x - mean(x)
+// sqrt(mean(m ^ 2) + 1e-12) / m
+struct find_bert
+{
+    template<class... Ts>
+    static auto multibroadcast_op(Ts... xs)
+    {
+        return match::name("multibroadcast")(match::arg(0)(xs...));
+    }
+    auto matcher() const
+    {
+        return match::name("gpu::div")(match::arg(0)(
+            match::name("gpu::sub")(
+                match::arg(0)(match::any().bind("x")), 
+                match::arg(1)(multibroadcast_op(match::name("gpu::reduce_mean")))
+            )), 
+            match::arg(1)(multibroadcast_op())
+        );
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins       = r.result;
+        auto x_ins   = r.instructions["x"];
+        auto args      = ins->inputs();
+
+        p.replace_instruction(ins, hip_bert{}, x_ins, args.back());
+    }
 };
 
 struct hip_mul_add
@@ -541,7 +577,8 @@ void fuse_ops::apply(program& p) const
         find_mul_add{},
         find_mul_add_relu{},
         find_add_relu{},
-        find_add_activation{"gpu::sqrt", hip_add_sqrt{}}
+        find_bert{}
+        // find_add_activation{"gpu::sqrt", hip_add_sqrt{}}
     );
     // clang-format on
 }
