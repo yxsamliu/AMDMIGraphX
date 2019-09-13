@@ -7,6 +7,15 @@
 #include <migraphx/onnx.hpp>
 #include <migraphx/stringutils.hpp>
 
+#include <migraphx/pass_manager.hpp>
+#include <migraphx/generate.hpp>
+#include <migraphx/dead_code_elimination.hpp>
+#include <migraphx/eliminate_identity.hpp>
+#include <migraphx/eliminate_pad.hpp>
+#include <migraphx/propagate_constant.hpp>
+#include <migraphx/simplify_algebra.hpp>
+#include <migraphx/simplify_reshapes.hpp>
+
 namespace migraphx {
 namespace driver {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -17,6 +26,7 @@ struct loader
     std::string file_type;
     bool is_nhwc  = true;
     unsigned trim = 0;
+    bool optimize = false;
 
     void parse(argument_parser& ap)
     {
@@ -26,6 +36,7 @@ struct loader
         ap(is_nhwc, {"--nhwc"}, ap.help("Treat tensorflow format as nhwc"), ap.set_value(true));
         ap(is_nhwc, {"--nchw"}, ap.help("Treat tensorflow format as nchw"), ap.set_value(false));
         ap(trim, {"--trim", "-t"}, ap.help("Trim instructions from the end"));
+        ap(optimize, {"--optimize"}, ap.help("Optimize when reading"), ap.set_value(true));
     }
 
     program load()
@@ -48,6 +59,20 @@ struct loader
             auto last = std::prev(p.end(), trim);
             p.remove_instructions(last, p.end());
         }
+        if(optimize)
+            migraphx::run_passes(p,
+                                 {
+                                     migraphx::eliminate_identity{},
+                                     migraphx::dead_code_elimination{},
+                                     migraphx::simplify_algebra{},
+                                     migraphx::dead_code_elimination{},
+                                     migraphx::simplify_reshapes{},
+                                     migraphx::dead_code_elimination{},
+                                     migraphx::propagate_constant{},
+                                     migraphx::dead_code_elimination{},
+                                     migraphx::eliminate_pad{},
+                                     migraphx::dead_code_elimination{},
+                                 });
         return p;
     }
 };
@@ -56,11 +81,13 @@ struct compiler
 {
     loader l;
     bool gpu = true;
+    std::vector<std::string> fill1;
     void parse(argument_parser& ap)
     {
         l.parse(ap);
         ap(gpu, {"--gpu"}, ap.help("Compile on the gpu"), ap.set_value(true));
         ap(gpu, {"--cpu"}, ap.help("Compile on the cpu"), ap.set_value(false));
+        ap(fill1, {"--fill1"}, ap.help("Fill parameter with 1s"), ap.append());
     }
 
     program compile()
@@ -70,7 +97,14 @@ struct compiler
         return p;
     }
 
-    auto params(const program& p) { return create_param_map(p, gpu); }
+    auto params(const program& p)
+    {
+        program::parameter_map m;
+        for(auto&& s : fill1)
+            m[s] = fill_argument(p.get_parameter_shape(s), 1);
+        fill_param_map(m, p, gpu);
+        return m;
+    }
 };
 
 struct read : command<read>
@@ -82,6 +116,19 @@ struct read : command<read>
     {
         auto p = l.load();
         std::cout << p << std::endl;
+    }
+};
+
+struct params : command<params>
+{
+    loader l;
+    void parse(argument_parser& ap) { l.parse(ap); }
+
+    void run()
+    {
+        auto p = l.load();
+        for(auto&& param : p.get_parameter_shapes())
+            std::cout << param.first << ": " << param.second << std::endl;
     }
 };
 

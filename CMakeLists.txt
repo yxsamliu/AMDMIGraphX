@@ -22,7 +22,7 @@ find_package(ROCM REQUIRED)
 
 include(ROCMSetupVersion)
 
-rocm_setup_version(VERSION 0.3)
+rocm_setup_version(VERSION 0.4)
 
 option( BUILD_SHARED_LIBS "Build as a shared library" ON )
 
@@ -32,7 +32,9 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 endif()
 
-if(CMAKE_CXX_COMPILER MATCHES ".*hcc")
+include(CheckCXXCompilerFlag)
+check_cxx_compiler_flag("--cuda-host-only -x hip" HAS_HIP)
+if(HAS_HIP)
     message(STATUS "Enable miopen backend")
     set(MIGRAPHX_ENABLE_GPU On CACHE BOOL "")
 else()
@@ -81,6 +83,7 @@ rocm_enable_clang_tidy(
         -modernize-use-override
         -modernize-pass-by-value
         -modernize-use-default-member-init
+        -modernize-use-trailing-return-type
         -modernize-use-transparent-functors
         -performance-type-promotion-in-math-fn
         -readability-braces-around-statements
@@ -122,6 +125,8 @@ rocm_enable_cppcheck(
         functionConst:*program.*
         shadowFunction
         shadowVar
+        shadowVariable
+        unsafeClassDivZero
         definePrefix:*test/include/test.hpp
     FORCE
     INCONCLUSIVE

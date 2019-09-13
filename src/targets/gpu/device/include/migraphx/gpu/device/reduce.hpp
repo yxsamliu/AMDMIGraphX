@@ -28,6 +28,16 @@ struct id
     }
 };
 
+struct mean
+{
+    size_t item_num = 1;
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
+    {
+        return static_cast<T>(x / item_num);
+    }
+};
+
 struct max
 {
     template <class T, class U>
@@ -128,7 +138,7 @@ __device__ T dpp_mov(T& x)
 template <class T, class Op>
 __device__ void dpp_reduce(T& in, Op op)
 {
-    T out;
+    T out{};
     out = dpp_mov<dpp_row_shr(1)>(in);
     in  = op(in, out);
     out = dpp_mov<dpp_row_shr(2)>(in);
@@ -145,8 +155,8 @@ __device__ void dpp_reduce(T& in, Op op)
 
 __device__ inline void dpp_reduce(float& x, sum)
 {
-#ifdef MIGRAPHX_USE_CLANG_TIDY
-    (void)x;
+#if defined(MIGRAPHX_USE_CLANG_TIDY) || defined(CPPCHECK)
+    x = 1;
 #else
     __asm__ volatile("s_nop 4\n"
                      "v_add_f32 %0 %0 %0 row_shr:1\n"
@@ -182,7 +192,7 @@ __device__ auto block_reduce(index idx, Op op, T init, std::size_t n, F f)
     }
     __syncthreads();
 
-    type y = 0;
+    type y = init;
     for(std::size_t i = 0; i < idx.nlocal() / 64; i++)
     {
         y = op(y, buffer[i]);
@@ -199,28 +209,15 @@ constexpr std::size_t compute_block_size(std::size_t n, std::size_t max_block_si
 }
 
 template <class Op, class T, class Input, class Output>
-void reduce(hipStream_t stream,
-            const argument& result,
-            const argument& arg,
-            Op op,
-            T init,
-            Input read_input,
-            Output read_output)
+void reduce_multi_impl(hipStream_t stream,
+                       const argument& result,
+                       const argument& arg,
+                       Op op,
+                       T init,
+                       Input read_input,
+                       Output read_output,
+                       const shape& reduce_slice)
 {
-    auto&& output_shape = result.get_shape();
-    auto&& input_shape  = arg.get_shape();
-    std::vector<std::size_t> reduce_lens;
-    std::transform(output_shape.lens().begin(),
-                   output_shape.lens().end(),
-                   input_shape.lens().begin(),
-                   std::back_inserter(reduce_lens),
-                   [](auto x, auto y) -> std::size_t {
-                       if(x == y)
-                           return 1;
-                       else
-                           return y;
-                   });
-    shape reduce_slice{output_shape.type(), reduce_lens};
     hip_visit_all(result, arg, reduce_slice)([&](auto output, auto input, auto reduce_shape) {
         auto nelements = result.get_shape().elements();
         auto relements = reduce_slice.elements();
@@ -238,6 +235,72 @@ void reduce(hipStream_t stream,
                 output.data()[out_idx] = read_output(r);
         });
     });
+}
+
+template <class Op, class T, class Input, class Output>
+void reduce_standard_impl(hipStream_t stream,
+                          const argument& result,
+                          const argument& arg,
+                          Op op,
+                          T init,
+                          Input read_input,
+                          Output read_output,
+                          std::size_t relements)
+{
+    hip_visit_all(result, arg)([&](auto output, auto input) {
+        auto nelements = result.get_shape().elements();
+
+        const std::size_t max_block_size = 256;
+        const std::size_t block_size     = compute_block_size(relements, max_block_size);
+        gs_launch(stream, nelements * block_size, block_size)([=](auto i, auto idx) __device__ {
+            const auto out_idx  = i / block_size;
+            const auto base_idx = out_idx * relements;
+            auto r = block_reduce<max_block_size>(idx, op, init, relements, [&](auto j) __device__ {
+                return read_input(input.data()[base_idx + j]);
+            });
+            if(idx.local == 0)
+                output.data()[out_idx] = read_output(r);
+        });
+    });
+}
+
+template <class Op, class T, class Input, class Output>
+void reduce(hipStream_t stream,
+            const argument& result,
+            const argument& arg,
+            Op op,
+            T init,
+            Input read_input,
+            Output read_output)
+{
+    auto&& output_shape = result.get_shape();
+    auto&& input_shape  = arg.get_shape();
+    assert(output_shape.lens().size() == input_shape.lens().size());
+    if(input_shape.standard() and output_shape.standard() and
+       output_shape.lens().back() != input_shape.lens().back() and
+       std::equal(output_shape.lens().begin(),
+                  std::prev(output_shape.lens().end()),
+                  input_shape.lens().begin()))
+    {
+        reduce_standard_impl(
+            stream, result, arg, op, init, read_input, read_output, input_shape.lens().back());
+    }
+    else
+    {
+        std::vector<std::size_t> reduce_lens;
+        std::transform(output_shape.lens().begin(),
+                       output_shape.lens().end(),
+                       input_shape.lens().begin(),
+                       std::back_inserter(reduce_lens),
+                       [](auto x, auto y) -> std::size_t {
+                           if(x == y)
+                               return 1;
+                           else
+                               return y;
+                       });
+        shape reduce_slice{output_shape.type(), reduce_lens};
+        reduce_multi_impl(stream, result, arg, op, init, read_input, read_output, reduce_slice);
+    }
 }
 
 } // namespace device

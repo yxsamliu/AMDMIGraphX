@@ -5,6 +5,7 @@
 #include <migraphx/instruction.hpp>
 #include <migraphx/quantization.hpp>
 #include <migraphx/cpu/target.hpp>
+#include <migraphx/quantization.hpp>
 #include <migraphx/verify.hpp>
 #include <migraphx/onnx.hpp>
 #include "test.hpp"
@@ -527,6 +528,51 @@ TEST_CASE(exp_test)
     EXPECT(migraphx::verify_range(results_vector, gold));
 }
 
+TEST_CASE(erf_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {4}};
+    auto l =
+        p.add_literal(migraphx::literal{s, {0.73785057, 1.58165966, -0.43597795, -0.01677432}});
+    p.add_instruction(migraphx::op::erf{}, l);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {0.70327317, 0.97470088, -0.46247893, -0.01892602};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(sqrt_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {5}};
+    auto l = p.add_literal(
+        migraphx::literal{s, {1.02481645, 0.85643062, 0.03404123, 0.92791926, 0.10569184}});
+    p.add_instruction(migraphx::op::sqrt{}, l);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {1.01233218, 0.92543537, 0.18450265, 0.96328566, 0.32510282};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(sign_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {5}};
+    auto l = p.add_literal(
+        migraphx::literal{s, {1.02481645, 0.85643062, -0.03404123, -0.92791926, 0.0}});
+    p.add_instruction(migraphx::op::sign{}, l);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {1.0, 1.0, -1.0, -1.0, 0.0};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
 TEST_CASE(log_test)
 {
     migraphx::program p;
@@ -538,6 +584,21 @@ TEST_CASE(log_test)
     std::vector<float> results_vector(3);
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
     std::vector<float> gold = {0.0f, 0.6931471806f, 1.0986122887f};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(pow_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3}};
+    auto b = p.add_literal(migraphx::literal{s, {1, 2, 3}});
+    auto e = p.add_literal(migraphx::literal{s, {1, 2, 3}});
+    p.add_instruction(migraphx::op::pow{}, b, e);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {1.0f, 4.0f, 27.0f};
     EXPECT(migraphx::verify_range(results_vector, gold));
 }
 
@@ -941,9 +1002,6 @@ TEST_CASE(softmax_simple_test)
     auto result = p.eval({});
     std::vector<float> results_vector(2);
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
-    for(auto v : results_vector)
-        std::cout << v << "\t";
-    std::cout << std::endl;
     EXPECT(migraphx::verify_range(results_vector, s));
 }
 
@@ -1138,6 +1196,114 @@ TEST_CASE(logsoftmax_test_axis_3)
     EXPECT(migraphx::verify_range(results_vector, s));
 }
 
+TEST_CASE(argmax_test_0)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 0, 1};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmax{0}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
+TEST_CASE(argmax_test_1)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {0, 0, 2, 1, 2, 0, 0, 2};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmax{1}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
+TEST_CASE(argmax_test_2)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {1, 3, 2, 2, 2, 3};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmax{2}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
+TEST_CASE(argmin_test_0)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 1, 0};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmin{0}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
+TEST_CASE(argmin_test_1)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {2, 2, 0, 2, 0, 1, 2, 0};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmin{1}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
+TEST_CASE(argmin_test_2)
+{
+    migraphx::program p;
+    std::vector<float> data = {1.2255,  1.6834,  -2.0305, -0.3221, 0.4701,  0.2583, 0.7545, 2.5758,
+                               -1.6849, 0.0928,  0.9022,  -0.8765, -0.4090, 0.9301, 2.0724, -1.5706,
+                               0.4867,  -0.1493, 0.6957,  -0.2179, 0.7142,  0.7177, 0.0183, 1.3497};
+    std::vector<int64_t> res_gold = {2, 1, 0, 3, 3, 2};
+    migraphx::shape data_shape{migraphx::shape::float_type, {2, 3, 4}};
+    auto dl = p.add_literal(migraphx::literal{data_shape, data});
+    p.add_instruction(migraphx::op::argmin{2}, dl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int64_t> result_vec;
+    result.visit([&](auto output) { result_vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(result_vec, res_gold));
+}
+
 TEST_CASE(conv2d_test)
 {
     migraphx::program p;
@@ -1314,6 +1480,107 @@ TEST_CASE(conv2d_padding_stride_test)
     auto result = p.eval({});
 
     std::vector<float> results_vector(16);
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    EXPECT(migraphx::verify_range(results_vector, s));
+}
+
+TEST_CASE(quant_conv2d_test)
+{
+    migraphx::program p;
+    migraphx::shape a_shape{migraphx::shape::int8_type, {2, 3, 4, 4}};
+    std::vector<int8_t> a(2 * 3 * 4 * 4);
+    std::iota(a.begin(), a.end(), 0);
+    auto al = p.add_literal(migraphx::literal{a_shape, a});
+
+    migraphx::shape c_shape{migraphx::shape::int8_type, {2, 3, 3, 3}};
+    std::vector<int8_t> c(2 * 3 * 3 * 3);
+    std::iota(c.begin(), c.end(), 0);
+    auto cl = p.add_literal(migraphx::literal{c_shape, c});
+
+    p.add_instruction(migraphx::op::quant_convolution{}, al, cl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+
+    std::vector<int32_t> s = {10197,
+                              10548,
+                              11601,
+                              11952,
+                              25506,
+                              26586,
+                              29826,
+                              30906,
+                              27045,
+                              27396,
+                              28449,
+                              28800,
+                              77346,
+                              78426,
+                              81666,
+                              82746};
+
+    std::vector<int32_t> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    EXPECT(migraphx::verify_range(results_vector, s));
+}
+
+TEST_CASE(quant_conv2d_padding_test)
+{
+    migraphx::program p;
+    migraphx::shape a_shape{migraphx::shape::int8_type, {2, 3, 4, 4}};
+    std::vector<int8_t> a(2 * 3 * 4 * 4);
+    std::iota(a.begin(), a.end(), 0);
+    auto al = p.add_literal(migraphx::literal{a_shape, a});
+    migraphx::shape c_shape{migraphx::shape::int8_type, {2, 3, 3, 3}};
+    std::vector<int8_t> c(2 * 3 * 3 * 3);
+    std::iota(c.begin(), c.end(), 0);
+    auto cl = p.add_literal(migraphx::literal{c_shape, c});
+    p.add_instruction(migraphx::op::quant_convolution{{{1, 1}}, {{1, 1}}}, al, cl);
+    p.compile(migraphx::cpu::target{});
+    auto result            = p.eval({});
+    std::vector<int32_t> s = {
+        4521,  6753,  7014,  4635,  6858,  10197, 10548, 6939,  7830,  11601, 11952, 7839,  5007,
+        7383,  7590,  4953,  10515, 15987, 16734, 11277, 16821, 25506, 26586, 17874, 19737, 29826,
+        30906, 20718, 13593, 20505, 21198, 14187, 13161, 19281, 19542, 12699, 18522, 27045, 27396,
+        17739, 19494, 28449, 28800, 18639, 11919, 17319, 17526, 11289, 34707, 51843, 52590, 34893,
+        51813, 77346, 78426, 52002, 54729, 81666, 82746, 54846, 36057, 53769, 54462, 36075};
+
+    std::vector<int32_t> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    EXPECT(migraphx::verify_range(results_vector, s));
+}
+
+TEST_CASE(quant_conv2d_padding_stride_test)
+{
+    migraphx::program p;
+    migraphx::shape a_shape{migraphx::shape::int8_type, {2, 3, 4, 4}};
+    std::vector<int8_t> a(2 * 3 * 4 * 4);
+    std::iota(a.begin(), a.end(), 0);
+    auto al = p.add_literal(migraphx::literal{a_shape, a});
+    migraphx::shape c_shape{migraphx::shape::int8_type, {2, 3, 3, 3}};
+    std::vector<int8_t> c(2 * 3 * 3 * 3);
+    std::iota(c.begin(), c.end(), 0);
+    auto cl = p.add_literal(migraphx::literal{c_shape, c});
+    p.add_instruction(migraphx::op::quant_convolution{{{1, 1}}, {{2, 2}}}, al, cl);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+
+    std::vector<int32_t> s = {4521,
+                              7014,
+                              7830,
+                              11952,
+                              10515,
+                              16734,
+                              19737,
+                              30906,
+                              13161,
+                              19542,
+                              19494,
+                              28800,
+                              34707,
+                              52590,
+                              54729,
+                              82746};
+    std::vector<int32_t> results_vector;
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
     EXPECT(migraphx::verify_range(results_vector, s));
 }
@@ -1554,7 +1821,7 @@ TEST_CASE(fp32_fp16_test)
     auto test_case = [&](std::vector<std::string>&& op_names) {
         std::vector<float> gold_res = {2.0, 4.0, 6.0, 8.0, 10.0, 12.0};
         auto p                      = create_program();
-        migraphx::quantize(p, op_names);
+        migraphx::quantize_fp16(p, op_names);
         p.compile(migraphx::cpu::target{});
         auto result = p.eval({});
         std::vector<float> res;
@@ -1583,7 +1850,7 @@ TEST_CASE(clip_test)
     EXPECT(migraphx::verify_range(results_vector, gold));
 }
 
-TEST_CASE(reduce_sum_test0)
+TEST_CASE(reduce_sum_axis0)
 {
     migraphx::program p;
     migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
@@ -1598,7 +1865,7 @@ TEST_CASE(reduce_sum_test0)
     EXPECT(results_vector == gold);
 }
 
-TEST_CASE(reduce_sum_test1)
+TEST_CASE(reduce_sum_axis1)
 {
     migraphx::program p;
     migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
@@ -1613,7 +1880,7 @@ TEST_CASE(reduce_sum_test1)
     EXPECT(results_vector == gold);
 }
 
-TEST_CASE(reduce_sum_test2)
+TEST_CASE(reduce_sum_axis2)
 {
     migraphx::program p;
     migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
@@ -1628,7 +1895,7 @@ TEST_CASE(reduce_sum_test2)
     EXPECT(results_vector == gold);
 }
 
-TEST_CASE(reduce_sum_test02)
+TEST_CASE(reduce_sum_axis02)
 {
     migraphx::program p;
     migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
@@ -1643,7 +1910,7 @@ TEST_CASE(reduce_sum_test02)
     EXPECT(results_vector == gold);
 }
 
-TEST_CASE(reduce_sum_test12)
+TEST_CASE(reduce_sum_axis12)
 {
     migraphx::program p;
     migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
@@ -1656,6 +1923,165 @@ TEST_CASE(reduce_sum_test12)
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
     std::vector<float> gold{10, 26, 42};
     EXPECT(results_vector == gold);
+}
+
+TEST_CASE(rsqrt_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3}};
+    auto l = p.add_literal(migraphx::literal{s, {4.0, 16.0, 64.0}});
+    p.add_instruction(migraphx::op::rsqrt{}, l);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector(3);
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {0.5, 0.25, 0.125};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(reduce_mean_axis1)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_mean{{1}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{2, 3, 6, 7, 10, 11};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_mean_axis2)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_mean{{2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{1.5f, 3.5f, 5.5f, 7.5f, 9.5f, 11.5f};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_mean_axis02)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_mean{{0, 2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{5.5, 7.5};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_mean_axis12)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_mean{{1, 2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{2.5f, 6.5f, 10.5f};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_mean_int)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::int32_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_mean{{1, 2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<int> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<int> gold{2, 6, 10};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(sqdiff_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3}};
+    auto l1 = p.add_literal(migraphx::literal{s, {-1, 0, 1}});
+    auto l2 = p.add_literal(migraphx::literal{s, {1, 2, 3}});
+    p.add_instruction(migraphx::op::sqdiff{}, l1, l2);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector(3);
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold = {4, 4, 4};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(round_test)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {9}};
+    auto l = p.add_literal(migraphx::literal{s, {1.1, 1.5, 1.6, -1.1, -1.5, -1.6, 0.0, 2.0, -2.0}});
+    p.add_instruction(migraphx::op::round{}, l);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    for(auto v : results_vector)
+    {
+        std::cout << v << "\t";
+    }
+    std::cout << std::endl;
+    std::vector<float> gold = {1.0, 2.0, 2.0, -1.0, -2.0, -2.0, 0.0, 2.0, -2.0};
+    EXPECT(migraphx::verify_range(results_vector, gold));
+}
+
+TEST_CASE(op_capture)
+{
+    migraphx::program p;
+    migraphx::shape s1{migraphx::shape::float_type, {3, 3}};
+    migraphx::shape s2{migraphx::shape::float_type, {3, 6}};
+    std::vector<float> d1(s1.elements());
+    std::vector<float> d2(s2.elements());
+    std::iota(d1.begin(), d1.end(), 0.0f);
+    std::iota(d2.begin(), d2.end(), 0.0f);
+
+    auto p1 = p.add_literal(s1, d1);
+    auto p2 = p.add_literal(s1, d1);
+    auto pb = p.add_literal(s2, d2);
+    auto pc = p.add_literal(s2, d2);
+    auto pa = p.add_instruction(migraphx::op::add{}, p1, p2);
+    auto ps = p.add_instruction(migraphx::op::dot{}, pa, pb, pc);
+    p.add_instruction(migraphx::op::dot{}, pa, ps);
+
+    migraphx::program capture_p = p;
+    migraphx::target t          = migraphx::cpu::target{};
+    migraphx::capture_arguments(capture_p, t, {"dot"});
+
+    p.compile(migraphx::cpu::target{});
+    capture_p.compile(migraphx::cpu::target{});
+
+    auto cap_res = capture_p.eval({});
+    auto res     = p.eval({});
+
+    std::vector<float> vec;
+    std::vector<float> cap_vec;
+    cap_res.visit([&](auto output) { cap_vec.assign(output.begin(), output.end()); });
+    res.visit([&](auto output) { vec.assign(output.begin(), output.end()); });
+
+    EXPECT(migraphx::verify_range(vec, cap_vec));
 }
 
 int main(int argc, const char* argv[]) { test::run(argc, argv); }
