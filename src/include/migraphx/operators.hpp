@@ -30,6 +30,7 @@
 #include <migraphx/op/flatten.hpp>
 #include <migraphx/op/gather.hpp>
 #include <migraphx/op/gru.hpp>
+#include <migraphx/op/hard_sigmoid.hpp>
 #include <migraphx/op/identity.hpp>
 #include <migraphx/op/im2col.hpp>
 #include <migraphx/op/leaky_relu.hpp>
@@ -59,12 +60,15 @@
 #include <migraphx/op/round.hpp>
 #include <migraphx/op/rsqrt.hpp>
 #include <migraphx/op/scalar.hpp>
+#include <migraphx/op/selu.hpp>
 #include <migraphx/op/sigmoid.hpp>
 #include <migraphx/op/sign.hpp>
 #include <migraphx/op/sinh.hpp>
 #include <migraphx/op/sin.hpp>
 #include <migraphx/op/slice.hpp>
 #include <migraphx/op/softmax.hpp>
+#include <migraphx/op/softplus.hpp>
+#include <migraphx/op/softsign.hpp>
 #include <migraphx/op/sqrt.hpp>
 #include <migraphx/op/sqdiff.hpp>
 #include <migraphx/op/squeeze.hpp>
