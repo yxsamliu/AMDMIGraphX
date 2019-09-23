@@ -21,7 +21,7 @@ namespace op {
 struct hard_sigmoid : unary<hard_sigmoid>
 {
     float alpha_val = 0.2;
-    float beta_val = 0.5;
+    float beta_val  = 0.5;
 
     hard_sigmoid() {}
 
@@ -30,7 +30,7 @@ struct hard_sigmoid : unary<hard_sigmoid>
     auto apply() const
     {
         auto alpha = alpha_val;
-        auto beta = beta_val;
+        auto beta  = beta_val;
         return [alpha, beta](auto x) {
             // using type = decltype(x);
             // return std::min(std::max(type(min), x), type(max));
