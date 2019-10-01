@@ -20,6 +20,27 @@ def rocmtestnode(variant, name, body) {
             }
         }
     }
+    def cmake_verify_build { compiler, flags ->
+        def cmd = """
+                env
+                ulimit -c unlimited
+                rm -rf build
+                mkdir build
+                cd build
+                CXX=${compiler} CXXFLAGS='-Werror -Wno-fallback' cmake ${flags} .. 
+                CTEST_PARALLEL_LEVEL=32 make -j32 driver
+                wget https://zenodo.org/record/3462709/files/frozen_resnet_v2_50.pb?download=1
+                ./bin/driver verify frozen_resnet_v2_50.pb
+        """
+        echo cmd
+        sh cmd
+        if (compiler == "hcc") {
+            // Only archive from master or develop
+            if (env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") {
+                archiveArtifacts artifacts: "build/*.deb", allowEmptyArchive: true, fingerprint: true
+            }
+        }
+    }
     node(name) {
         withEnv(['HSA_ENABLE_SDMA=0', 'MIOPEN_DEBUG_GCN_ASM_KERNELS=0']) {
             stage("checkout ${variant}") {
@@ -114,13 +135,9 @@ rocmtest tidy: rocmnode('rocmtest') { cmake_build ->
     stage('Clang Release Python 3') {
         cmake_build("hcc", "-DCMAKE_BUILD_TYPE=release -DPYTHON_EXECUTABLE=/usr/local/bin/python3")
     }
-}, clang_release_verify: rocmnode('vega') { cmake_build ->
+}, clang_release_verify: rocmnode('vega') { cmake_verify_build ->
     stage('Clang Release Verify') {
-        cmake_build("hcc", "-DCMAKE_BUILD_TYPE=release")
-        sh '''
-            wget https://zenodo.org/record/3462709/files/frozen_resnet_v2_50.pb?download=1
-            ./bin/driver verify frozen_resnet_v2_50.pb
-        '''
+        cmake_verify_build("hcc", "-DCMAKE_BUILD_TYPE=release")
     }
 }, gcc5: rocmnode('rocmtest') { cmake_build ->
     stage('GCC 5 Debug') {
