@@ -20,7 +20,7 @@ def rocmtestnode(variant, name, body) {
             }
         }
     }
-    def cmake_verify_build { compiler, flags ->
+    def cmake_verify_build = { compiler, flags ->
         def cmd = """
                 env
                 ulimit -c unlimited
