@@ -21,7 +21,7 @@ def rocmtestnode(variant, name, body) {
         }
     }
     def cmake_verify_build = { compiler, flags ->
-        def cmd = """
+        def cmd_verify = """
                 env
                 ulimit -c unlimited
                 rm -rf build
@@ -32,8 +32,8 @@ def rocmtestnode(variant, name, body) {
                 wget https://zenodo.org/record/3462709/files/frozen_resnet_v2_50.pb?download=1
                 ./bin/driver verify frozen_resnet_v2_50.pb
         """
-        echo cmd
-        sh cmd
+        echo cmd_verify
+        sh cmd_verify
         if (compiler == "hcc") {
             // Only archive from master or develop
             if (env.BRANCH_NAME == "develop" || env.BRANCH_NAME == "master") {
