@@ -114,6 +114,14 @@ rocmtest tidy: rocmnode('rocmtest') { cmake_build ->
     stage('Clang Release Python 3') {
         cmake_build("hcc", "-DCMAKE_BUILD_TYPE=release -DPYTHON_EXECUTABLE=/usr/local/bin/python3")
     }
+}, clang_release_verify: rocmnode('vega') { cmake_build ->
+    stage('Clang Release Verify') {
+        cmake_build("hcc", "-DCMAKE_BUILD_TYPE=release")
+        sh '''
+            wget https://zenodo.org/record/3462709/files/frozen_resnet_v2_50.pb?download=1
+            ./bin/driver verify frozen_resnet_v2_50.pb
+        '''
+    }
 }, gcc5: rocmnode('rocmtest') { cmake_build ->
     stage('GCC 5 Debug') {
         cmake_build("g++-5", "-DCMAKE_BUILD_TYPE=debug")
