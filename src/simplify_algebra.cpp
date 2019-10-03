@@ -172,19 +172,19 @@ struct find_concat_relu
 {
     auto matcher() const
     {
-        return match::name("concat")(match::all_of[match::inputs()](match::name("relu"), match::used_once()));
+        return match::name("concat")(
+            match::all_of[match::inputs()](match::name("relu"), match::used_once()));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins   = r.result;
+        auto ins = r.result;
 
         auto inputs = ins->inputs();
         std::transform(inputs.begin(), inputs.end(), inputs.begin(), [&](auto i) {
             return i->inputs().front();
         });
-        auto concat = p.insert_instruction(
-            ins, ins->get_operator(), inputs);
+        auto concat = p.insert_instruction(ins, ins->get_operator(), inputs);
         p.replace_instruction(ins, op::relu{}, concat);
     }
 };
@@ -193,12 +193,13 @@ struct find_concat_add
 {
     auto matcher() const
     {
-        return match::name("concat")(match::all_of[match::inputs()](match::name("add"), match::used_once()));
+        return match::name("concat")(
+            match::all_of[match::inputs()](match::name("add"), match::used_once()));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins   = r.result;
+        auto ins       = r.result;
         auto concat_op = ins->get_operator();
 
         auto xinputs = ins->inputs();
@@ -224,15 +225,13 @@ struct find_concat_broadcast
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins   = r.result;
-        auto op = any_cast<op::concat>(ins->get_operator());
+        auto ins       = r.result;
+        auto op        = any_cast<op::concat>(ins->get_operator());
         auto broadcast = any_cast<op::broadcast>(ins->inputs().front()->get_operator());
-        if (any_of(ins->inputs(), [&](auto i) {
-            return i->get_operator() != broadcast;
-        }))
+        if(any_of(ins->inputs(), [&](auto i) { return i->get_operator() != broadcast; }))
             return;
 
-        if (op.axis != broadcast.axis)
+        if(op.axis != broadcast.axis)
             return;
 
         auto inputs = ins->inputs();
