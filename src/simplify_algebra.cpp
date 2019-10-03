@@ -6,6 +6,7 @@
 #include <migraphx/op/concat.hpp>
 #include <migraphx/op/as_shape.hpp>
 #include <migraphx/op/broadcast.hpp>
+#include <migraphx/op/relu.hpp>
 #include <migraphx/op/convolution.hpp>
 #include <migraphx/matcher.hpp>
 #include <migraphx/literal.hpp>
@@ -167,6 +168,83 @@ struct find_inner_broadcast
     }
 };
 
+struct find_concat_relu
+{
+    auto matcher() const
+    {
+        return match::name("concat")(match::all_of[match::inputs()](match::name("relu"), match::used_once()));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+
+        auto inputs = ins->inputs();
+        std::transform(inputs.begin(), inputs.end(), inputs.begin(), [&](auto i) {
+            return i->inputs().front();
+        });
+        auto concat = p.insert_instruction(
+            ins, ins->get_operator(), inputs);
+        p.replace_instruction(ins, op::relu{}, concat);
+    }
+};
+
+struct find_concat_add
+{
+    auto matcher() const
+    {
+        return match::name("concat")(match::all_of[match::inputs()](match::name("add"), match::used_once()));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+        auto concat_op = ins->get_operator();
+
+        auto xinputs = ins->inputs();
+        std::transform(xinputs.begin(), xinputs.end(), xinputs.begin(), [&](auto i) {
+            return i->inputs().front();
+        });
+        auto yinputs = ins->inputs();
+        std::transform(yinputs.begin(), yinputs.end(), yinputs.begin(), [&](auto i) {
+            return i->inputs().back();
+        });
+        auto xconcat = p.insert_instruction(ins, concat_op, xinputs);
+        auto yconcat = p.insert_instruction(ins, concat_op, yinputs);
+        p.replace_instruction(ins, op::add{}, xconcat, yconcat);
+    }
+};
+
+struct find_concat_broadcast
+{
+    auto matcher() const
+    {
+        return match::name("concat")(match::all_of[match::inputs()](match::name("broadcast")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins   = r.result;
+        auto op = any_cast<op::concat>(ins->get_operator());
+        auto broadcast = any_cast<op::broadcast>(ins->inputs().front()->get_operator());
+        if (any_of(ins->inputs(), [&](auto i) {
+            return i->get_operator() != broadcast;
+        }))
+            return;
+
+        if (op.axis != broadcast.axis)
+            return;
+
+        auto inputs = ins->inputs();
+        std::transform(inputs.begin(), inputs.end(), inputs.begin(), [&](auto i) {
+            return i->inputs().front();
+        });
+
+        auto concat = p.insert_instruction(ins, op::concat{0}, inputs);
+        p.replace_instruction(ins, op::broadcast{op.axis, ins->get_shape().lens()}, concat);
+    }
+};
+
 bool axis_equal(const std::vector<std::size_t>& x,
                 const std::vector<std::size_t>& y,
                 std::size_t axis)
@@ -277,6 +355,9 @@ void simplify_algebra::apply(program& p) const
                             find_double_add_lit_broadcast{},
                             find_add_lit_broadcast{},
                             find_add_convs{},
+                            find_concat_relu{},
+                            find_concat_add{},
+                            find_concat_broadcast{},
                             find_mul_conv{},
                             find_mul_add{});
         dead_code_elimination{}.apply(p);
