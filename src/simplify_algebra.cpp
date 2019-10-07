@@ -4,6 +4,10 @@
 #include <migraphx/op/add.hpp>
 #include <migraphx/op/mul.hpp>
 #include <migraphx/op/concat.hpp>
+<<<<<<< HEAD
+=======
+#include <migraphx/op/convolution.hpp>
+>>>>>>> fuse-add-conv
 #include <migraphx/op/as_shape.hpp>
 #include <migraphx/op/broadcast.hpp>
 #include <migraphx/op/relu.hpp>
@@ -168,6 +172,7 @@ struct find_inner_broadcast
     }
 };
 
+<<<<<<< HEAD
 struct find_concat_relu
 {
     auto matcher() const
@@ -244,6 +249,8 @@ struct find_concat_broadcast
     }
 };
 
+=======
+>>>>>>> fuse-add-conv
 bool axis_equal(const std::vector<std::size_t>& x,
                 const std::vector<std::size_t>& y,
                 std::size_t axis)
@@ -285,9 +292,12 @@ struct find_add_convs
 
     static shape compute_stride_shape(const shape& input, std::size_t n)
     {
-        shape s{input.type(),
-                {input.lens()[0], input.lens()[1], input.lens()[2] / n, input.lens()[3] / n}};
-        return {input.type(), s.lens(), {s.strides()[0], s.strides()[1], s.strides()[2], n}};
+        return {input.type(),
+                {input.lens()[0], input.lens()[1], input.lens()[2] / n, input.lens()[3] / n},
+                {input.strides()[0],
+                 input.strides()[1],
+                 input.strides()[2] * n,
+                 input.strides()[3] * n}};
     }
 
     void apply(program& p, match::matcher_result r) const

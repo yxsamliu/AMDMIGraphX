@@ -138,6 +138,7 @@ migraphx::argument run_gpu(migraphx::program& p)
     EXPECT(is_shared(ctx, p.get_context()));
     p.dry_run(m);
     EXPECT(is_shared(ctx, p.get_context()));
+    p.eval(m);
     return migraphx::gpu::from_gpu(p.eval(m));
 }
 
@@ -821,6 +822,44 @@ struct test_conv_relu_half : verify_program<test_conv_relu_half>
     }
 };
 
+struct test_conv_add : verify_program<test_conv_add>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        auto x = p.add_parameter("x", {migraphx::shape::float_type, {1, 8, 4, 4}});
+        auto w =
+            p.add_literal(migraphx::generate_literal({migraphx::shape::float_type, {2, 8, 3, 3}}));
+        auto y = p.add_parameter("y", {migraphx::shape::float_type, {1, 8, 4, 4}});
+        auto v =
+            p.add_literal(migraphx::generate_literal({migraphx::shape::float_type, {2, 8, 3, 3}}));
+        auto conv1 = p.add_instruction(migraphx::op::convolution{}, x, w);
+        auto conv2 = p.add_instruction(migraphx::op::convolution{}, y, v);
+        auto sum   = p.add_instruction(migraphx::op::add{}, conv1, conv2);
+        p.add_instruction(migraphx::op::exp{}, sum);
+        return p;
+    }
+};
+
+struct test_conv_add2 : verify_program<test_conv_add2>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        auto x = p.add_parameter("x", {migraphx::shape::float_type, {1, 8, 2, 2}});
+        auto w =
+            p.add_literal(migraphx::generate_literal({migraphx::shape::float_type, {2, 8, 1, 1}}));
+        auto y = p.add_parameter("y", {migraphx::shape::float_type, {1, 8, 4, 4}});
+        auto v =
+            p.add_literal(migraphx::generate_literal({migraphx::shape::float_type, {2, 8, 1, 1}}));
+        auto conv1 = p.add_instruction(migraphx::op::convolution{}, x, w);
+        auto conv2 = p.add_instruction(migraphx::op::convolution{{0, 0}, {2, 2}}, y, v);
+        auto sum   = p.add_instruction(migraphx::op::add{}, conv1, conv2);
+        p.add_instruction(migraphx::op::exp{}, sum);
+        return p;
+    }
+};
+
 struct test_add_relu : verify_program<test_add_relu>
 {
     migraphx::program create_program() const
@@ -1048,6 +1087,24 @@ struct test_gemm : verify_program<test_gemm>
         auto a = p.add_parameter("a", migraphx::shape{migraphx::shape::float_type, {4, 5}});
         auto b = p.add_parameter("b", migraphx::shape{migraphx::shape::float_type, {5, 3}});
         p.add_instruction(migraphx::op::dot{}, a, b);
+        return p;
+    }
+};
+
+struct test_gemm_copy : verify_program<test_gemm_copy>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape sa{migraphx::shape::float_type, {2, 16}};
+        migraphx::shape sb{migraphx::shape::float_type, {16, 8}};
+        migraphx::shape sc{migraphx::shape::float_type, {2, 8}};
+        auto pa = p.add_parameter("a", sa);
+        auto pb = p.add_parameter("b", sb);
+        auto pc = p.add_parameter("c", sc);
+        auto dr = p.add_instruction(migraphx::op::dot{}, pa, pb, pc);
+        p.add_instruction(migraphx::op::add{}, dr, dr);
+
         return p;
     }
 };
