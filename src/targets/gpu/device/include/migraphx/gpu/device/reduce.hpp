@@ -30,7 +30,7 @@ struct id
 
 struct mean
 {
-    size_t item_num = 1;
+    index_int item_num = 1;
     template <class T>
     MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
     {
@@ -202,7 +202,7 @@ __device__ auto block_reduce(index idx, Op op, T init, index_int n, F f)
 #endif
 constexpr index_int compute_block_size(index_int n, index_int max_block_size)
 {
-    size_t block_size = 64;
+    index_int block_size = 64;
     while(block_size < max_block_size and block_size < n)
         block_size *= 2;
     return block_size;
