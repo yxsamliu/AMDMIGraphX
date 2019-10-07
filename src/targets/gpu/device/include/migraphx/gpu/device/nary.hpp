@@ -40,6 +40,17 @@ auto nary_nonstandard_nonpacked_impl(hipStream_t stream, F f, argument result, A
     });
 }
 
+inline auto create_broadcast_index(index_int len, index_int stride)
+{
+    auto next_stride   = stride * len;
+    auto e_next_stride = encode_divisor(next_stride);
+    auto e_stride      = encode_divisor(stride);
+    return [=](auto i) {
+        // ( i % next_stride) / stride
+        return fast_div(i, e_stride) - len * fast_div(i, e_next_stride);
+    };
+}
+
 template <class F, class... Arguments>
 auto nary_nonstandard_packed_impl(hipStream_t stream,
                                   F f,
@@ -68,18 +79,18 @@ void nary_broadcast_vec_impl(
                       std::find_if(b_shape.strides().begin(), b_shape.strides().end(), [](auto x) {
                           return x != 0;
                       }));
-    auto bdim_len         = output_shape.lens()[bdim];
-    auto bdim_stride      = output_shape.strides()[bdim];
-    auto bdim_next_stride = bdim_stride * bdim_len;
+    auto bdim_len      = output_shape.lens()[bdim];
+    auto bdim_stride   = output_shape.strides()[bdim];
+    auto broadcast_idx = create_broadcast_index(bdim_len, bdim_stride);
 
-    const std::size_t vec_size     = 4;
-    const std::size_t nlocal       = 1024;
-    const std::size_t nglobal      = 256 * nlocal;
-    const std::size_t bdim_vec_len = bdim_len / vec_size;
+    const index_int vec_size     = 4;
+    const index_int nlocal       = 1024;
+    const index_int nglobal      = 256 * nlocal;
+    const index_int bdim_vec_len = bdim_len / vec_size;
     hip_vec_visit_all<vec_size>(result, barg, args...)(
         [&](auto output, auto binput, auto... inputs) {
-            using type                  = typename decltype(output)::value_type;
-            const std::size_t nelements = output.size() / vec_size;
+            using type                = typename decltype(output)::value_type;
+            const index_int nelements = output.size() / vec_size;
             launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
 
                 MIGRAPHX_DEVICE_SHARED type buffer[2048 / vec_size];
@@ -93,10 +104,10 @@ void nary_broadcast_vec_impl(
                 // Process the data
                 for(size_t i = idx.global; i < nelements; i += nglobal)
                 {
-                    auto bidx = ((i * vec_size) % bdim_next_stride) / bdim_stride;
+                    auto bidx = broadcast_idx(i * vec_size);
                     auto b    = bp[bidx];
                     auto out  = output.data()[i];
-                    for(std::size_t j = 0; j < vec_size; j++)
+                    for(index_int j = 0; j < vec_size; j++)
                     {
                         out[j] = f(inputs.data()[i][j]..., b);
                     }
@@ -117,13 +128,13 @@ void nary_broadcast_impl(hipStream_t stream, F f, argument result, argument barg
                       std::find_if(b_shape.strides().begin(), b_shape.strides().end(), [](auto x) {
                           return x != 0;
                       }));
-    auto bdim_len         = output_shape.lens()[bdim];
-    auto bdim_stride      = output_shape.strides()[bdim];
-    auto bdim_next_stride = bdim_stride * bdim_len;
+    auto bdim_len      = output_shape.lens()[bdim];
+    auto bdim_stride   = output_shape.strides()[bdim];
+    auto broadcast_idx = create_broadcast_index(bdim_len, bdim_stride);
 
-    const std::size_t nlocal  = 1024;
-    const std::size_t nglobal = 256 * nlocal;
-    std::size_t nelements     = result.get_shape().elements();
+    const index_int nlocal  = 1024;
+    const index_int nglobal = 256 * nlocal;
+    index_int nelements     = result.get_shape().elements();
     hip_visit_all(result, barg, args...)([&](auto output, auto binput, auto... inputs) {
         using type = typename decltype(output)::value_type;
         launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
@@ -137,7 +148,7 @@ void nary_broadcast_impl(hipStream_t stream, F f, argument result, argument barg
             // Process the data
             for(size_t i = idx.global; i < nelements; i += nglobal)
             {
-                auto bidx        = (i % bdim_next_stride) / bdim_stride;
+                auto bidx        = broadcast_idx(i);
                 auto b           = buffer[bidx];
                 output.data()[i] = f(inputs.data()[i]..., b);
             }
@@ -160,18 +171,18 @@ void nary_double_broadcast_vec_impl(
                       std::find_if(b_shape.strides().begin(), b_shape.strides().end(), [](auto x) {
                           return x != 0;
                       }));
-    auto bdim_len         = output_shape.lens()[bdim];
-    auto bdim_stride      = output_shape.strides()[bdim];
-    auto bdim_next_stride = bdim_stride * bdim_len;
+    auto bdim_len      = output_shape.lens()[bdim];
+    auto bdim_stride   = output_shape.strides()[bdim];
+    auto broadcast_idx = create_broadcast_index(bdim_len, bdim_stride);
 
-    const std::size_t vec_size     = 4;
-    const std::size_t nlocal       = 1024;
-    const std::size_t nglobal      = 256 * nlocal;
-    const std::size_t bdim_vec_len = bdim_len / vec_size;
+    const index_int vec_size     = 4;
+    const index_int nlocal       = 1024;
+    const index_int nglobal      = 256 * nlocal;
+    const index_int bdim_vec_len = bdim_len / vec_size;
     hip_vec_visit_all<vec_size>(result, barg1, barg2, args...)(
         [&](auto output, auto binput1, auto binput2, auto... inputs) {
-            using type                  = typename decltype(output)::value_type;
-            const std::size_t nelements = output.size() / vec_size;
+            using type                = typename decltype(output)::value_type;
+            const index_int nelements = output.size() / vec_size;
             launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
 
                 MIGRAPHX_DEVICE_SHARED type buffer[2048 / vec_size];
@@ -189,11 +200,11 @@ void nary_double_broadcast_vec_impl(
                 // Process the data
                 for(size_t i = idx.global; i < nelements; i += nglobal)
                 {
-                    auto bidx = ((i * vec_size) % bdim_next_stride) / bdim_stride;
+                    auto bidx = broadcast_idx(i * vec_size);
                     auto b1   = bp[bidx];
                     auto b2   = bp[bidx + bdim_len];
                     auto out  = output.data()[i];
-                    for(std::size_t j = 0; j < vec_size; j++)
+                    for(index_int j = 0; j < vec_size; j++)
                     {
                         out[j] = f(inputs.data()[i][j]..., b2, b1);
                     }
@@ -218,13 +229,13 @@ void nary_double_broadcast_impl(
                       std::find_if(b_shape.strides().begin(), b_shape.strides().end(), [](auto x) {
                           return x != 0;
                       }));
-    auto bdim_len         = output_shape.lens()[bdim];
-    auto bdim_stride      = output_shape.strides()[bdim];
-    auto bdim_next_stride = bdim_stride * bdim_len;
+    auto bdim_len      = output_shape.lens()[bdim];
+    auto bdim_stride   = output_shape.strides()[bdim];
+    auto broadcast_idx = create_broadcast_index(bdim_len, bdim_stride);
 
-    const std::size_t nlocal  = 1024;
-    const std::size_t nglobal = 256 * nlocal;
-    std::size_t nelements     = result.get_shape().elements();
+    const index_int nlocal  = 1024;
+    const index_int nglobal = 256 * nlocal;
+    index_int nelements     = result.get_shape().elements();
     hip_visit_all(result, barg1, barg2, args...)(
         [&](auto output, auto binput1, auto binput2, auto... inputs) {
             using type = typename decltype(output)::value_type;
@@ -243,7 +254,7 @@ void nary_double_broadcast_impl(
                 // Process the data
                 for(size_t i = idx.global; i < nelements; i += nglobal)
                 {
-                    auto bidx        = (i % bdim_next_stride) / bdim_stride;
+                    auto bidx        = broadcast_idx(i);
                     auto b1          = buffer[bidx];
                     auto b2          = buffer[bidx + bdim_len];
                     output.data()[i] = f(inputs.data()[i]..., b2, b1);
@@ -259,14 +270,14 @@ void nary_standard_vec_impl(hipStream_t stream, F f, argument result, Arguments.
     const auto& output_shape = result.get_shape();
     visit_all(result, args...)([&](auto output, auto... inputs) {
         using type = device_type<std::remove_cv_t<typename decltype(output)::value_type>>;
-        const std::size_t vec_size = 4;
-        auto data                  = pack_vec<4>(device_cast(inputs.data())...);
-        auto* outp                 = as_vec<4>(device_cast(output.data()));
+        const index_int vec_size = 4;
+        auto data                = pack_vec<4>(device_cast(inputs.data())...);
+        auto* outp               = as_vec<4>(device_cast(output.data()));
         gs_launch(stream, output_shape.elements() / vec_size)([=](auto i) {
             vec<type, 4> out = outp[i];
             data(
                 [&](auto... xs) {
-                    for(std::size_t j = 0; j < vec_size; j++)
+                    for(index_int j = 0; j < vec_size; j++)
                     {
                         out[j] = f(xs[j]...);
                     }
@@ -281,7 +292,7 @@ template <class F, class... Arguments>
 void nary_standard_impl(hipStream_t stream, F f, argument result, Arguments... args)
 {
     MIGRAPHX_TRACE_NARY_FUNCTION
-    std::size_t nelements = result.get_shape().elements();
+    index_int nelements = result.get_shape().elements();
     hip_pointer_visit_all(result, args...)([&](auto output, auto... inputs) {
         gs_launch(stream, nelements)([=](auto i) { output[i] = f(inputs[i]...); });
     });
@@ -320,7 +331,7 @@ auto nary_standard(hipStream_t stream, argument result, Arguments... args)
 
 template <class... Arguments>
 bool broadcastable(bool& divisible_by_4,
-                   std::size_t max_size,
+                   index_int max_size,
                    const argument& result,
                    const argument& barg,
                    const Arguments&... args)
@@ -352,7 +363,7 @@ bool broadcastable(bool& divisible_by_4,
     return false;
 }
 
-inline bool broadcastable(bool& divisible_by_4, std::size_t, const argument&, const argument&)
+inline bool broadcastable(bool& divisible_by_4, index_int, const argument&, const argument&)
 {
     divisible_by_4 = false;
     return false;
