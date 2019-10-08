@@ -9,7 +9,7 @@ namespace gpu {
 namespace device {
 
 constexpr const uint64_t fast_div_shift = 42;
-MIGRAPHX_DEVICE_CONSTEXPR uint64_t encode_divisor(uint64_t divisor)
+inline uint64_t encode_divisor(uint64_t divisor)
 {
     if(divisor == 0)
         return 0;

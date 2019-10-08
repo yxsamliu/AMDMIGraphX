@@ -4,6 +4,7 @@
 #include <migraphx/config.hpp>
 #include <migraphx/gpu/device/launch.hpp>
 #include <migraphx/gpu/device/shape.hpp>
+#include <algorithm>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -45,11 +46,15 @@ template <index_int N>
 inline auto mi_launch(hipStream_t stream, const hip_shape<N>& s, index_int local = 1024)
 {
     assert(s.standard);
+    assert(s.elements() > 0);
     index_int n       = s.elements();
     index_int groups  = (n + local - 1) / local;
     index_int nglobal = std::min<index_int>(128, groups) * local;
 
+    assert(groups > 0);
+    assert(nglobal > 0);
     auto nglobal_multi = s.multi(nglobal);
+    assert(std::any_of(nglobal_multi.begin(), nglobal_multi.end(), [](auto x) { return x > 0; }));
 
     return [=](auto f) {
         launch(stream, nglobal, local)([=](auto idx) {
