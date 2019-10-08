@@ -53,7 +53,8 @@ inline auto mi_launch(hipStream_t stream, const hip_shape<N>& s, index_int local
     assert(groups > 0);
     assert(nglobal > 0);
     auto nglobal_multi = s.multi(nglobal);
-    // assert(std::any_of(nglobal_multi.begin(), nglobal_multi.end(), [](auto x) { return x > 0; }));
+    // assert(std::any_of(nglobal_multi.begin(), nglobal_multi.end(), [](auto x) { return x > 0;
+    // }));
 
     return [=](auto f) {
         launch(stream, nglobal, local)([=](auto idx) {
