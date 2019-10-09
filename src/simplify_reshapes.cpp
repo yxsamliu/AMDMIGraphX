@@ -202,8 +202,6 @@ struct find_nested_concat
     }
 };
 
-
-
 void simplify_reshapes::apply(program& p) const
 {
     for(int i = 0; i < 2; i++)
