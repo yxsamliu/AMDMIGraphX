@@ -303,7 +303,7 @@ bool has_finalize(const T& x)
 
 namespace std {
 
-template<>
+template <>
 struct hash<migraphx::operation>
 {
     std::size_t operator()(const migraphx::operation& s) const noexcept

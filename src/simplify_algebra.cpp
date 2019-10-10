@@ -351,18 +351,15 @@ struct find_add_convs
 // Should be last
 struct group_concat
 {
-    auto matcher() const
-    {
-        return match::name("concat");
-    }
+    auto matcher() const { return match::name("concat"); }
 
     void apply(program& p, match::matcher_result r) const
     {
         std::vector<instruction_ref> constants;
         std::unordered_map<operation, std::vector<instruction_ref>> groups;
-        for(auto ins:r.result->inputs())
+        for(auto ins : r.result->inputs())
         {
-            if (ins->can_eval())
+            if(ins->can_eval())
                 constants.push_back(ins);
             else
                 groups[ins->get_operator()].push_back(ins);
@@ -370,16 +367,16 @@ struct group_concat
 
         std::vector<instruction_ref> inputs;
         auto add_input = [&](auto name, const auto& x) {
-            if (name == "concat")
+            if(name == "concat")
                 inputs.insert(inputs.end(), x.begin(), x.end());
-            else if (x.size() > 1)
+            else if(x.size() > 1)
                 inputs.push_back(p.insert_instruction(r.result, r.result->get_operator(), x));
-            else if (x.size() == 1)
+            else if(x.size() == 1)
                 inputs.push_back(x.front());
         };
 
         add_input("", constants);
-        for(auto&& pp:groups)
+        for(auto&& pp : groups)
             add_input(pp.first.name(), pp.second);
         p.replace_instruction(r.result, r.result->get_operator(), inputs);
     }
