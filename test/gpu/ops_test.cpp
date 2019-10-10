@@ -1981,6 +1981,35 @@ struct test_pad_int8 : verify_program<test_pad_int8>
     }
 };
 
+struct test_pad_conv_transform : verify_program<test_pad_conv_transform>
+{
+    migraphx::program create_program() const
+    {
+        migraphx::program p;
+        migraphx::shape s0{migraphx::shape::float_type, {1, 2, 4, 4}};
+        std::vector<float> data = { 1, 1, 1, 1,
+                                    2, 2, 2, 2,
+                                    3, 3, 3, 3,
+                                    4, 4, 4, 4,
+                                    5, 5, 5, 5,
+                                    6, 6, 6, 6,
+                                    7, 7, 7, 7,
+                                    8, 8, 8, 8};
+        migraphx::shape s1{migraphx::shape::float_type, {2, 2, 2, 2}};
+        std::vector<float> weights = { 0, 0, 0, 1,
+                                       0, 0, 0, 0,
+                                       0, 0, 0, 0,
+                                       0, 0, 0, 1};
+        // auto l0 = p.add_parameter("x", s0);
+        auto l0 = p.add_literal(migraphx::literal{s0, data});
+        auto l1 = p.add_literal(migraphx::literal{s1, weights});
+        migraphx::op::convolution op;
+        op.padding = {1, 1};
+        p.add_instruction(op, l0, l1);
+        return p;
+    }
+};
+
 struct test_pooling_autopad : verify_program<test_pooling_autopad>
 {
     migraphx::program create_program() const

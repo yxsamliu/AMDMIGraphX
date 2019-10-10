@@ -2196,4 +2196,35 @@ TEST_CASE(op_capture)
     EXPECT(migraphx::verify_range(vec, cap_vec));
 }
 
+TEST_CASE(pad_transform)
+{
+    migraphx::program p;
+    migraphx::shape s0{migraphx::shape::float_type, {1, 3, 2, 2}};
+    std::vector<float> data = { 1, 1,
+                                2, 2,
+                                3, 3,
+                                4, 4,
+                                5, 5,
+                                6, 6,
+                                };
+    migraphx::shape s1{migraphx::shape::float_type, {3, 3, 2, 2}};
+    std::vector<float> weights = {  0, 0, 0, 1,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 1,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 0,
+                                    0, 0, 0, 1};
+    // auto l0 = p.add_parameter("x", s0);
+    auto l0 = p.add_literal(migraphx::literal{s0, data});
+    auto l1 = p.add_literal(migraphx::literal{s1, weights});
+    migraphx::op::convolution op;
+    op.padding = {1, 1};
+    p.add_instruction(op, l0, l1);
+    p.compile(migraphx::cpu::target{});
+    p.eval({});
+}
+
 int main(int argc, const char* argv[]) { test::run(argc, argv); }
