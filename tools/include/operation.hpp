@@ -5,6 +5,7 @@
 #include <string>
 #include <functional>
 #include <memory>
+#include <sstream>
 #include <type_traits>
 #include <utility>
 #include <migraphx/reflect.hpp>
@@ -299,5 +300,20 @@ bool has_finalize(const T& x)
 
 } // namespace MIGRAPHX_INLINE_NS
 } // namespace migraphx
+
+namespace std {
+
+template<>
+struct hash<migraphx::operation>
+{
+    std::size_t operator()(const migraphx::operation& s) const noexcept
+    {
+        std::stringstream ss;
+        ss << s;
+        return std::hash<std::string>{}(ss.str());
+    }
+};
+
+} // namespace std
 
 #endif

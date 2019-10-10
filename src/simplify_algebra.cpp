@@ -348,6 +348,43 @@ struct find_add_convs
     }
 };
 
+// Should be last
+struct group_concat
+{
+    auto matcher() const
+    {
+        return match::name("concat");
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        std::vector<instruction_ref> constants;
+        std::unordered_map<operation, std::vector<instruction_ref>> groups;
+        for(auto ins:r.result->inputs())
+        {
+            if (ins->can_eval())
+                constants.push_back(ins);
+            else
+                groups[ins->get_operator()].push_back(ins);
+        }
+
+        std::vector<instruction_ref> inputs;
+        auto add_input = [&](auto name, const auto& x) {
+            if (name == "concat")
+                inputs.insert(inputs.end(), x.begin(), x.end());
+            else if (x.size() > 1)
+                inputs.push_back(p.insert_instruction(r.result, r.result->get_operator(), x));
+            else if (x.size() == 1)
+                inputs.push_back(x.front());
+        };
+
+        add_input("", constants);
+        for(auto&& pp:groups)
+            add_input(pp.first.name(), pp.second);
+        p.replace_instruction(r.result, r.result->get_operator(), inputs);
+    }
+};
+
 void simplify_algebra::apply(program& p) const
 {
     // Run simplifications multiple times
@@ -362,7 +399,8 @@ void simplify_algebra::apply(program& p) const
                             find_concat_add{},
                             find_concat_broadcast{},
                             find_mul_conv{},
-                            find_mul_add{});
+                            find_mul_add{},
+                            group_concat{});
         dead_code_elimination{}.apply(p);
     }
 }
