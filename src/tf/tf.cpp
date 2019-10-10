@@ -407,25 +407,24 @@ struct tf_parser
                 if(pads[0] != pads[2] || pads[1] != pads[3])
                 {
                     std::vector<int64_t> padding = {0, 0, pads[0], pads[1], 0, 0, pads[2], pads[3]};
-                    if(padding == std::vector<int64_t>{0,0,0,0,0,0,1,1})
+                    if(padding == std::vector<int64_t>{0, 0, 0, 0, 0, 0, 1, 1})
                     {
                         size_t channels = input_dims[1];
-                        std::vector<float> filter(channels*channels*2*2, 0);
+                        std::vector<float> filter(channels * channels * 2 * 2, 0);
                         shape s0{shape::float_type, {channels, channels, 2, 2}};
                         auto strides = s0.strides();
                         for(size_t i = 0; i < channels; i++)
                         {
-                            filter[strides[0]*i + strides[1]*i + 3] = 1;
+                            filter[strides[0] * i + strides[1] * i + 3] = 1;
                         }
                         op::convolution conv_op;
 
-                        conv_op.padding = {1,1};
-                        auto l1 = prog.add_literal(migraphx::literal{s0, filter});
-                        l0 = prog.add_instruction(conv_op, l0, l1);
+                        conv_op.padding = {1, 1};
+                        auto l1         = prog.add_literal(migraphx::literal{s0, filter});
+                        l0              = prog.add_instruction(conv_op, l0, l1);
                     }
                     else
                         l0 = prog.add_instruction(migraphx::op::pad{padding}, l0);
-                    
                 }
                 else
                 {
@@ -513,21 +512,21 @@ struct tf_parser
                 if(pads[0] != pads[2] || pads[1] != pads[3])
                 {
                     std::vector<int64_t> padding = {0, 0, pads[0], pads[1], 0, 0, pads[2], pads[3]};
-                    if(padding == std::vector<int64_t>{0,0,0,0,0,0,1,1})
+                    if(padding == std::vector<int64_t>{0, 0, 0, 0, 0, 0, 1, 1})
                     {
                         size_t channels = input_dims[1];
-                        std::vector<float> filter(channels*channels*2*2, 0);
+                        std::vector<float> filter(channels * channels * 2 * 2, 0);
                         shape s0{shape::float_type, {channels, channels, 2, 2}};
                         auto strides = s0.strides();
                         for(size_t i = 0; i < channels; i++)
                         {
-                            filter[strides[0]*i + strides[1]*i + 3] = 1;
+                            filter[strides[0] * i + strides[1] * i + 3] = 1;
                         }
                         op::convolution conv_op;
 
-                        conv_op.padding = {1,1};
-                        auto l1 = prog.add_literal(migraphx::literal{s0, filter});
-                        l0 = prog.add_instruction(conv_op, l0, l1);
+                        conv_op.padding = {1, 1};
+                        auto l1         = prog.add_literal(migraphx::literal{s0, filter});
+                        l0              = prog.add_instruction(conv_op, l0, l1);
                     }
                     else
                         l0 = prog.add_instruction(migraphx::op::pad{padding}, l0);
@@ -695,8 +694,8 @@ struct tf_parser
     parse_pad(const std::string&, const attribute_map&, std::vector<instruction_ref> args)
     {
         auto in_shape = args.front()->get_shape();
-        auto dims = in_shape.lens();
-        size_t ndims = dims.size();
+        auto dims     = in_shape.lens();
+        size_t ndims  = dims.size();
 
         // in tf, the paddings are arranged as a 2d shape (ndims, 2),
         // the last dim contains the left padding and right padding respectively
@@ -716,20 +715,20 @@ struct tf_parser
             pads[i]         = pad_per_dim[i].first;
             pads[i + ndims] = pad_per_dim[i].second;
         }
-        if(pads == std::vector<int64_t>{0,0,0,0,0,0,1,1})
+        if(pads == std::vector<int64_t>{0, 0, 0, 0, 0, 0, 1, 1})
         {
             size_t channels = dims[1];
-            std::vector<float> filter(channels*channels*2*2, 0);
+            std::vector<float> filter(channels * channels * 2 * 2, 0);
             shape s0{shape::float_type, {channels, channels, 2, 2}};
             auto strides = s0.strides();
             for(size_t i = 0; i < channels; i++)
             {
-                filter[strides[0]*channels + strides[1]*channels+3] = 1;   
+                filter[strides[0] * channels + strides[1] * channels + 3] = 1;
             }
             op::convolution conv_op;
 
-            conv_op.padding = {1,1};
-            auto l0 = prog.add_literal(migraphx::literal{s0, filter});
+            conv_op.padding = {1, 1};
+            auto l0         = prog.add_literal(migraphx::literal{s0, filter});
             return prog.add_instruction(conv_op, args.front(), l0);
         }
         op.pads = pads;
