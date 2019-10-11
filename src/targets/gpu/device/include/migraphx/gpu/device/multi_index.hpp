@@ -48,13 +48,15 @@ inline auto mi_launch(hipStream_t stream, const hip_shape<N>& s, index_int local
     assert(s.elements() > 0);
     index_int n       = s.elements();
     index_int groups  = (n + local - 1) / local;
-    index_int nglobal = std::min<index_int>(128, groups) * local;
+    index_int nglobal = std::min<std::size_t>(128, groups) * local;
 
     assert(groups > 0);
     assert(nglobal > 0);
     auto nglobal_multi = s.multi(nglobal);
-    // assert(std::any_of(nglobal_multi.begin(), nglobal_multi.end(), [](auto x) { return x > 0;
-    // }));
+    // Skip checking this, since this will cause metadata to not be generated
+    // for some unknown reason.
+    //
+    // assert(std::any_of(nglobal_multi.begin(), nglobal_multi.end(), [](auto x){return x>0;}));
 
     return [=](auto f) {
         launch(stream, nglobal, local)([=](auto idx) {
