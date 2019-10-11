@@ -17,6 +17,7 @@ const auto& reshaper_names()
 {
     // clang-format off
     static const std::unordered_set<std::string> names = {
+        "flatten",
         "reshape",
         "contiguous",
         "squeeze",
@@ -98,6 +99,8 @@ struct find_nop_reshapes
     auto matcher() const
     {
         auto reshapes = reshaper_names();
+        reshapes.insert("pooling");
+        reshapes.insert("multibroadcast");
         reshapes.insert("transpose");
         reshapes.insert("slice");
         return match::name(reshapes)(match::same_shape(match::arg(0)));
@@ -191,13 +194,16 @@ struct find_nested_concat
         auto ins  = mr.result;
         auto axis = get_axis(ins);
         std::vector<instruction_ref> args;
-        for(auto&& i : ins->inputs())
-        {
-            if(i->name() == "concat" and get_axis(i) == axis and i->outputs().size() == 1)
-                args.insert(args.end(), i->inputs().begin(), i->inputs().end());
-            else
-                args.push_back(i);
-        }
+        fix([&](auto self, auto&& inputs) {
+            for(auto&& i : inputs)
+            {
+                if(i->name() == "concat" and get_axis(i) == axis and i->outputs().size() == 1)
+                    self(i->inputs());
+                else
+                    args.push_back(i);
+            }
+
+        })(ins->inputs());
         p.replace_instruction(ins, ins->get_operator(), args);
     }
 };

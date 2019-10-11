@@ -176,6 +176,29 @@ __device__ inline void dpp_reduce(float& x, sum)
 #endif
 }
 
+__device__ inline void dpp_reduce(gpu_half& x, sum)
+{
+#if defined(MIGRAPHX_USE_CLANG_TIDY) || defined(CPPCHECK)
+    x = 1;
+#else
+    __asm__ volatile("s_nop 4\n"
+                     "v_add_f16 %0 %0 %0 row_shr:1\n"
+                     "s_nop 1\n"
+                     "v_add_f16 %0 %0 %0 row_shr:2\n"
+                     "s_nop 1\n"
+                     "v_add_f16 %0 %0 %0 row_shr:4 bank_mask:0xe\n"
+                     "s_nop 1\n"
+                     "v_add_f16 %0 %0 %0 row_shr:8 bank_mask:0xc\n"
+                     "s_nop 1\n"
+                     "v_add_f16 %0 %0 %0 row_bcast:15 row_mask:0xa\n"
+                     "s_nop 1\n"
+                     "v_add_f16 %0 %0 %0 row_bcast:31 row_mask:0xc\n"
+                     "s_nop 1\n"
+                     : "=v"(x)
+                     : "0"(x));
+#endif
+}
+
 template <index_int N, class Op, class T, class F>
 __device__ auto block_reduce(index idx, Op op, T init, index_int n, F f)
 {
