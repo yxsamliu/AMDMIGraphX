@@ -1499,6 +1499,7 @@ struct onnx_parser
                                std::inserter(instructions, instructions.end()),
                                [](auto&& x, auto&& y) { return std::make_pair(y, x); });
             }
+            assert(instructions.count(name) > 0);
         }
     }
 
