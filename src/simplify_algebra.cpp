@@ -171,17 +171,19 @@ struct find_div_sqrt
 {
     auto matcher() const
     {
-        return match::name("div")(match::used_once(), 
+        return match::name("div")(
+            match::used_once(),
             match::args(match::any().bind("a"),
                         match::name("multibroadcast")(
-                        match::args(match::name("sqrt")(match::used_once()).bind("b"))).bind("bcst")));
+                            match::args(match::name("sqrt")(match::used_once()).bind("b")))
+                            .bind("bcst")));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins   = r.result;
-        auto a_ins = r.instructions["a"];
-        auto b_ins = r.instructions["b"];
+        auto ins      = r.result;
+        auto a_ins    = r.instructions["a"];
+        auto b_ins    = r.instructions["b"];
         auto bcst_ins = r.instructions["bcst"];
 
         p.replace_instruction(b_ins, op::rsqrt{}, b_ins->inputs());
@@ -194,30 +196,31 @@ struct find_div_gemm
 {
     auto matcher() const
     {
-        return match::name("div")(match::used_once(), 
-            match::args(match::name("dot").bind("a"),
-                        match::name("multibroadcast")(
-                        match::args(match::is_constant().bind("alpha"))).bind("bcst")));
+        return match::name("div")(match::used_once(),
+                                  match::args(match::name("dot").bind("a"),
+                                              match::name("multibroadcast")(
+                                                  match::args(match::is_constant().bind("alpha")))
+                                                  .bind("bcst")));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins   = r.result;
-        auto dot_ins = r.instructions["a"];
+        auto ins       = r.result;
+        auto dot_ins   = r.instructions["a"];
         auto one_alpha = r.instructions["alpha"];
 
         // ensure alpha is a scalar
-        if (one_alpha->get_shape().elements() != 1)
+        if(one_alpha->get_shape().elements() != 1)
             return;
 
         float scale = one_alpha->get_literal().at<float>();
         auto dot_op = any_cast<op::dot>(dot_ins->get_operator());
-        auto r_dot = p.replace_instruction(dot_ins, op::dot{dot_op.alpha/scale, dot_op.beta/scale}, dot_ins->inputs());
+        auto r_dot  = p.replace_instruction(
+            dot_ins, op::dot{dot_op.alpha / scale, dot_op.beta / scale}, dot_ins->inputs());
 
         p.replace_instruction(ins, r_dot);
     }
 };
-
 
 void simplify_algebra::apply(program& p) const
 {
