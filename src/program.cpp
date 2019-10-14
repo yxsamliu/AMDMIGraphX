@@ -608,7 +608,8 @@ void program::print_graph(std::ostream& os, bool brief) const
             {
                 os << "\t" << enclose_name(names.at(arg)) << " -> " << enclose_name(names.at(ins));
                 if(not brief)
-                    os << "[label=" << enclose_name("{" + to_string_range(ins->get_shape().lens()) + "}") << "]";
+                    os << "[label="
+                       << enclose_name("{" + to_string_range(ins->get_shape().lens()) + "}") << "]";
                 os << ";" << std::endl;
             }
         }
