@@ -594,7 +594,6 @@ static std::string enclose_name(const std::string& name)
 void program::print_graph(std::ostream& os, bool brief) const
 {
     os << "digraph {" << std::endl;
-    os << "\trankdir=LR;" << std::endl;
     print_program(*this, [&](auto ins, const auto& names) {
         std::string label;
         if(brief)
@@ -609,7 +608,7 @@ void program::print_graph(std::ostream& os, bool brief) const
             {
                 os << "\t" << enclose_name(names.at(arg)) << " -> " << enclose_name(names.at(ins));
                 if(not brief)
-                    os << "[label=" << enclose_name(to_string(ins->get_shape())) << "]";
+                    os << "[label=" << enclose_name("{" + to_string_range(ins->get_shape().lens()) + "}") << "]";
                 os << ";" << std::endl;
             }
         }
