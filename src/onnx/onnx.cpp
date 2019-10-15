@@ -231,7 +231,7 @@ struct onnx_parser
             auto s1       = arg1->get_shape().lens();
             auto out_lens = compute_broadcasted_lens(s0, s1);
             shape out_shape{arg0->get_shape().type(), out_lens};
-            auto l0       = arg0;
+            auto l0 = arg0;
             if(l0->get_shape() != out_shape)
                 l0 = prog.add_instruction(op::multibroadcast{out_lens}, arg0);
 
