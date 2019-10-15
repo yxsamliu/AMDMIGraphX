@@ -97,11 +97,12 @@ static std::unordered_map<std::string, std::size_t> create_weight_map()
 {
     return {{"hip::load_literal", 0},
             {"hip::allocate", 0},
-            {"gpu::convolution", 4},
-            {"gpu::conv_bias_relu", 4},
-            {"gpu::pooling", 2},
-            {"gpu::gemm", 2},
-            {"gpu::concat", 1}};
+            {"gpu::convolution", 8},
+            {"gpu::conv_bias_relu", 8},
+            {"gpu::pooling", 4},
+            {"gpu::gemm", 4},
+            {"gpu::concat", 3},
+            {"hip_copy", 3}};
 }
 
 static const std::unordered_map<std::string, std::size_t>& weight_map()
