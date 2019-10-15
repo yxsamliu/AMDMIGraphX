@@ -119,10 +119,7 @@ struct find_nop_reshapes
 
 struct find_reshape_pooling
 {
-    auto matcher() const
-    {
-        return match::name("pooling");
-    }
+    auto matcher() const { return match::name("pooling"); }
 
     static shape compute_stride_shape(const shape& input, std::size_t h, std::size_t w)
     {
@@ -136,14 +133,17 @@ struct find_reshape_pooling
 
     void apply(program& p, const match::matcher_result& mr) const
     {
-        auto ins = mr.result;
+        auto ins     = mr.result;
         auto pooling = any_cast<op::pooling>(ins->get_operator());
-        if (pooling.padding != make_array<size_t>(0, 0))
+        if(pooling.padding != make_array<size_t>(0, 0))
             return;
-        if (pooling.lengths != make_array<size_t>(1, 1))
+        if(pooling.lengths != make_array<size_t>(1, 1))
             return;
         auto input = ins->inputs().front();
-        p.replace_instruction(ins, op::as_shape{compute_stride_shape(input->get_shape(), pooling.stride[0], pooling.stride[1])}, input);
+        p.replace_instruction(ins,
+                              op::as_shape{compute_stride_shape(
+                                  input->get_shape(), pooling.stride[0], pooling.stride[1])},
+                              input);
     }
 };
 

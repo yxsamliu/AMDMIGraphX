@@ -70,14 +70,13 @@ struct find_mul_add
         return match::name("add")(match::args(conv_or_const(), conv_or_const()));
     }
 
-
     auto matcher() const
     {
         return match::name("mul")(match::either_arg(0, 1)(
             match::name("add")(
-                match::either_arg(0, 1)(
-                    match::any().bind("x"),
-                    match::any_of(conv_or_const(), add_conv_or_const()).bind("b")),
+                match::either_arg(0,
+                                  1)(match::any().bind("x"),
+                                     match::any_of(conv_or_const(), add_conv_or_const()).bind("b")),
                 match::none_of(match::args(match::is_constant(), match::is_constant())),
                 match::used_once()),
             match::is_constant().bind("a")));
