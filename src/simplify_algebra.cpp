@@ -60,13 +60,24 @@ struct find_mul_conv
 // a * (x + b) => a * x + a * b
 struct find_mul_add
 {
+    static auto conv_or_const()
+    {
+        return match::any_of(conv_const_weights(), match::is_constant());
+    }
+
+    static auto add_conv_or_const()
+    {
+        return match::name("add")(match::args(conv_or_const(), conv_or_const()));
+    }
+
+
     auto matcher() const
     {
         return match::name("mul")(match::either_arg(0, 1)(
             match::name("add")(
                 match::either_arg(0, 1)(
                     match::any().bind("x"),
-                    match::any_of(conv_const_weights(), match::is_constant()).bind("b")),
+                    match::any_of(conv_or_const(), add_conv_or_const()).bind("b")),
                 match::none_of(match::args(match::is_constant(), match::is_constant())),
                 match::used_once()),
             match::is_constant().bind("a")));
@@ -385,7 +396,7 @@ struct group_concat
 void simplify_algebra::apply(program& p) const
 {
     // Run simplifications multiple times
-    for(int i = 0; i < 4; i++)
+    for(int i = 0; i < 6; i++)
     {
         match::find_matches(p,
                             find_inner_broadcast{},

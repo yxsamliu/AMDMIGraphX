@@ -3,11 +3,13 @@
 #include <migraphx/instruction.hpp>
 #include <migraphx/op/as_shape.hpp>
 #include <migraphx/op/transpose.hpp>
+#include <migraphx/op/pooling.hpp>
 #include <migraphx/op/concat.hpp>
 #include <migraphx/iterator_for.hpp>
 #include <migraphx/ranges.hpp>
 #include <migraphx/matcher.hpp>
 #include <migraphx/permutation.hpp>
+#include <migraphx/array.hpp>
 #include <unordered_set>
 
 namespace migraphx {
@@ -99,7 +101,9 @@ struct find_nop_reshapes
     auto matcher() const
     {
         auto reshapes = reshaper_names();
-        reshapes.insert("pooling");
+        reshapes.insert("as_shape");
+        reshapes.insert("pad");
+        reshapes.insert("concat");
         reshapes.insert("multibroadcast");
         reshapes.insert("transpose");
         reshapes.insert("slice");
@@ -110,6 +114,36 @@ struct find_nop_reshapes
     {
         auto ins = mr.result;
         p.replace_instruction(ins, ins->inputs().front());
+    }
+};
+
+struct find_reshape_pooling
+{
+    auto matcher() const
+    {
+        return match::name("pooling");
+    }
+
+    static shape compute_stride_shape(const shape& input, std::size_t h, std::size_t w)
+    {
+        return {input.type(),
+                {input.lens()[0], input.lens()[1], input.lens()[2] / h, input.lens()[3] / w},
+                {input.strides()[0],
+                 input.strides()[1],
+                 input.strides()[2] * h,
+                 input.strides()[3] * w}};
+    }
+
+    void apply(program& p, const match::matcher_result& mr) const
+    {
+        auto ins = mr.result;
+        auto pooling = any_cast<op::pooling>(ins->get_operator());
+        if (pooling.padding != make_array<size_t>(0, 0))
+            return;
+        if (pooling.lengths != make_array<size_t>(1, 1))
+            return;
+        auto input = ins->inputs().front();
+        p.replace_instruction(ins, op::as_shape{compute_stride_shape(input->get_shape(), pooling.stride[0], pooling.stride[1])}, input);
     }
 };
 
@@ -226,6 +260,7 @@ void simplify_reshapes::apply(program& p) const
                                 find_reshaper{},
                                 find_transpose{},
                                 find_concat_transpose{},
+                                find_reshape_pooling{},
                                 find_nested_concat{});
         }
     }
