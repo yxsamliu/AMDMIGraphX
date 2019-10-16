@@ -274,7 +274,8 @@ struct hip_erf_factor
     shape compute_shape(const std::vector<shape>& inputs) const
     {
         check_shapes{inputs, *this}.has(2);
-        if (inputs.front().packed()) {
+        if(inputs.front().packed())
+        {
             return inputs.front();
         }
         else
@@ -644,16 +645,19 @@ struct find_div_erf
 {
     auto matcher() const
     {
-        return match::name("gpu::erf")(match::arg(0)(match::name("gpu::div")(match::arg(0)(match::any().bind("x")),
-                            match::arg(1)(match::name("multibroadcast")(match::arg(0)(match::any().bind("factor")))))));
+        return match::name("gpu::erf")(match::arg(0)(
+            match::name("gpu::div")(match::arg(0)(match::any().bind("x")),
+                                    match::arg(1)(match::name("multibroadcast")(
+                                        match::arg(0)(match::any().bind("factor")))))));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto erf_ins = r.result;
-        auto input   = r.instructions["x"];
+        auto erf_ins    = r.result;
+        auto input      = r.instructions["x"];
         auto ins_factor = r.instructions["factor"];
-        if (ins_factor->get_shape().elements() != 1) return;
+        if(ins_factor->get_shape().elements() != 1)
+            return;
 
         float factor = ins_factor->get_literal().at<float>();
         p.replace_instruction(erf_ins, hip_erf_factor{factor}, {input, erf_ins->inputs()[1]});
