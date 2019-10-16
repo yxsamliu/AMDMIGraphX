@@ -204,11 +204,11 @@ struct find_div_gemm
                                               match::name("multibroadcast")(
                                                   match::args(match::is_constant().bind("alpha")))
                                                   .bind("bcst")));
-     }
+    }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins = r.result;
+        auto ins       = r.result;
         auto dot_ins   = r.instructions["a"];
         auto one_alpha = r.instructions["alpha"];
 
