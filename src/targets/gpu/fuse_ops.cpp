@@ -10,6 +10,7 @@
 #include <migraphx/gpu/device/add_sigmoid.hpp>
 #include <migraphx/gpu/device/add_tanh.hpp>
 #include <migraphx/gpu/device/mul_add_relu.hpp>
+#include <migraphx/gpu/device/erf_factor.hpp>
 #include <migraphx/gpu/device/add.hpp>
 #include <migraphx/instruction.hpp>
 #include <migraphx/array.hpp>
@@ -257,6 +258,40 @@ struct hip_add_sigmoid : binary_device<hip_add_relu, &device::add_sigmoid>
 
 struct hip_add_tanh : binary_device<hip_add_tanh, &device::add_tanh>
 {
+};
+
+struct hip_erf_factor
+{
+    float factor = 1.0f;
+
+    template <class Self, class F>
+    static auto reflect(Self& self, F f)
+    {
+        return pack(f(self.factor, "factor"));
+    }
+
+    std::string name() const { return "hip::erf_factor"; }
+    shape compute_shape(const std::vector<shape>& inputs) const
+    {
+        check_shapes{inputs, *this}.has(2);
+        if (inputs.front().packed()) {
+            return inputs.front();
+        }
+        else
+        {
+            return {inputs.front().type(), inputs.front().lens()};
+        }
+    }
+
+    argument compute(context& ctx, const shape&, const std::vector<argument>& args) const
+    {
+        device::erf_factor(ctx.get_stream().get(), args.at(1), args.at(0), factor);
+        return args.at(1);
+    }
+    std::ptrdiff_t output_alias(const std::vector<shape>& shapes) const
+    {
+        return shapes.size() - 1;
+    }
 };
 
 struct hip_mul_add
@@ -605,6 +640,26 @@ struct find_conv_bias_relu
     }
 };
 
+struct find_div_erf
+{
+    auto matcher() const
+    {
+        return match::name("gpu::erf")(match::arg(0)(match::name("gpu::div")(match::arg(0)(match::any().bind("x")),
+                            match::arg(1)(match::name("multibroadcast")(match::arg(0)(match::any().bind("factor")))))));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto erf_ins = r.result;
+        auto input   = r.instructions["x"];
+        auto ins_factor = r.instructions["factor"];
+        if (ins_factor->get_shape().elements() != 1) return;
+
+        float factor = ins_factor->get_literal().at<float>();
+        p.replace_instruction(erf_ins, hip_erf_factor{factor}, {input, erf_ins->inputs()[1]});
+    }
+};
+
 void fuse_ops::apply(program& p) const
 {
     // clang-format off
@@ -614,6 +669,7 @@ void fuse_ops::apply(program& p) const
         find_conv_bias{ctx},
         find_mul_add{},
         find_mul_add_relu{},
+        find_div_erf{}, 
         find_add_unary{"gpu::relu", hip_add_relu{}, hip_triadd_relu{}},
         find_add_unary{"gpu::sigmoid", hip_add_sigmoid{}, hip_triadd_sigmoid{}},
         find_add_unary{"gpu::tanh", hip_add_tanh{}, hip_triadd_tanh{}},

@@ -60,6 +60,7 @@ add_library(migraphx_device
     device/sub.cpp
     device/tan.cpp
     device/tanh.cpp
+    device/erf_factor.cpp
 )
 set_target_properties(migraphx_device PROPERTIES EXPORT_NAME device)
 rocm_set_soversion(migraphx_device ${PROJECT_VERSION})
