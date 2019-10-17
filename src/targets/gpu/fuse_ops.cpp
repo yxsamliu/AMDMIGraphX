@@ -660,7 +660,8 @@ struct find_div_erf
             return;
 
         float factor = ins_factor->get_literal().at<float>();
-        p.replace_instruction(erf_ins, hip_erf_factor{1.0f / factor}, {input, erf_ins->inputs()[1]});
+        p.replace_instruction(
+            erf_ins, hip_erf_factor{1.0f / factor}, {input, erf_ins->inputs()[1]});
     }
 };
 
