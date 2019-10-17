@@ -1408,9 +1408,9 @@ struct onnx_parser
     parse_split(size_t num_outputs, attribute_map attributes, std::vector<instruction_ref> args)
     {
         std::vector<instruction_ref> result;
-        auto lens = args[0]->get_shape().lens();
+        auto lens     = args[0]->get_shape().lens();
         auto num_dims = lens.size();
-        size_t axis = 0;
+        size_t axis   = 0;
         if(contains(attributes, "axis"))
             axis = parse_value(attributes.at("axis")).at<int>();
         auto split_size = lens[axis] / num_outputs;
@@ -1419,10 +1419,10 @@ struct onnx_parser
             op::slice op;
             op.axes = std::vector<int64_t>(num_dims);
             std::iota(op.axes.begin(), op.axes.end(), 0);
-            op.starts = std::vector<int64_t>(num_dims, 0);
-            op.ends = std::vector<int64_t>(lens.begin(), lens.end());
+            op.starts       = std::vector<int64_t>(num_dims, 0);
+            op.ends         = std::vector<int64_t>(lens.begin(), lens.end());
             op.starts[axis] = i;
-            op.ends[axis] = i + split_size;
+            op.ends[axis]   = i + split_size;
             result.push_back(prog.add_instruction(op, args));
         }
         return result;

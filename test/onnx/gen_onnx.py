@@ -1329,20 +1329,17 @@ def split_test():
     y3 = helper.make_tensor_value_info('3', TensorProto.FLOAT, [2])
     z = helper.make_tensor_value_info('4', TensorProto.FLOAT, [6])
 
-    node1 = onnx.helper.make_node(
-        'Split',
-        inputs=['0'],
-        outputs=['1', '2', '3']
-    )
+    node1 = onnx.helper.make_node('Split',
+                                  inputs=['0'],
+                                  outputs=['1', '2', '3'])
 
-    node2 = onnx.helper.make_node(
-        'Concat',
-        inputs=['1', '2', '3'],
-        axis=0,
-        outputs=['4']
-    )
+    node2 = onnx.helper.make_node('Concat',
+                                  inputs=['1', '2', '3'],
+                                  axis=0,
+                                  outputs=['4'])
 
-    return ([node1,node2], [x], [z])
+    return ([node1, node2], [x], [z])
+
 
 @onnx_test
 def sqrt_test():
