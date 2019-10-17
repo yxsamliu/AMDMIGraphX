@@ -109,6 +109,7 @@ struct onnx_parser
         add_mem_op("ReduceMean", &onnx_parser::parse_reduce_oper<op::reduce_mean>);
         add_mem_op("ReduceMin", &onnx_parser::parse_reduce_oper<op::reduce_min>);
         add_mem_op("ReduceMax", &onnx_parser::parse_reduce_oper<op::reduce_max>);
+        // add_mem_op("Split", &onnx_parser::parse_split);
 
         // init the activation function map
         init_actv_func();
@@ -1403,6 +1404,30 @@ struct onnx_parser
         return prog.add_instruction(op::convert{type}, std::move(args));
     }
 
+    std::vector<instruction_ref>
+    parse_split(size_t num_outputs, attribute_map attributes, std::vector<instruction_ref> args)
+    {
+        std::vector<instruction_ref> result;
+        auto lens = args[0]->get_shape().lens();
+        auto num_dims = lens.size();
+        size_t axis = 0;
+        if(contains(attributes, "axis"))
+            axis = parse_value(attributes.at("axis")).at<int>();
+        auto split_size = lens[axis] / num_outputs;
+        for(auto i = 0; i < lens[axis]; i += split_size)
+        {
+            op::slice op;
+            op.axes = std::vector<int64_t>(num_dims);
+            std::iota(op.axes.begin(), op.axes.end(), 0);
+            op.starts = std::vector<int64_t>(num_dims, 0);
+            op.ends = std::vector<int64_t>(lens.begin(), lens.end());
+            op.starts[axis] = i;
+            op.ends[axis] = i + split_size;
+            result.push_back(prog.add_instruction(op, args));
+        }
+        return result;
+    }
+
     void parse_from(std::istream& is)
     {
         onnx::ModelProto model;
@@ -1477,13 +1502,16 @@ struct onnx_parser
                 args.push_back(instructions.at(input));
             }
             std::vector<instruction_ref> result;
-            if(ops.count(node.op_type()) == 0)
+            if(ops.count(node.op_type()) == 0 and node.op_type() != "Split")
             {
                 result.push_back(prog.add_instruction(op::unknown{node.op_type()}, args));
             }
             else
             {
-                result = ops[node.op_type()](get_attributes(node), args);
+                if(node.op_type() == "Split")
+                    result = parse_split(node.output().size(), get_attributes(node), args);
+                else
+                    result = ops[node.op_type()](get_attributes(node), args);
             }
             // Even no output nodes produce output in migraphx
             if(node.output().empty() and result.size() == 1)

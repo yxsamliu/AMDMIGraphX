@@ -1322,6 +1322,29 @@ def softmax_test():
 
 
 @onnx_test
+def split_test():
+    x = helper.make_tensor_value_info('0', TensorProto.FLOAT, [6])
+    y1 = helper.make_tensor_value_info('1', TensorProto.FLOAT, [2])
+    y2 = helper.make_tensor_value_info('2', TensorProto.FLOAT, [2])
+    y3 = helper.make_tensor_value_info('3', TensorProto.FLOAT, [2])
+    z = helper.make_tensor_value_info('4', TensorProto.FLOAT, [6])
+
+    node1 = onnx.helper.make_node(
+        'Split',
+        inputs=['0'],
+        outputs=['1', '2', '3']
+    )
+
+    node2 = onnx.helper.make_node(
+        'Concat',
+        inputs=['1', '2', '3'],
+        axis=0,
+        outputs=['4']
+    )
+
+    return ([node1,node2], [x], [z])
+
+@onnx_test
 def sqrt_test():
     x = helper.make_tensor_value_info('x', TensorProto.FLOAT, [10, 15])
     y = helper.make_tensor_value_info('y', TensorProto.FLOAT, [10, 15])
