@@ -9,7 +9,7 @@ namespace device {
 
 void erf_factor(hipStream_t stream, const argument& result, const argument& arg, float factor)
 {
-    nary(stream, result, arg)([=](auto x) { return ::erf(to_hip_type(x / factor)); });
+    nary(stream, result, arg)([=](auto x) { return ::erf(to_hip_type(x * factor)); });
 }
 
 } // namespace device
