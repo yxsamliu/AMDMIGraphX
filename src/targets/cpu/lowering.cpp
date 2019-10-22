@@ -17,6 +17,7 @@
 #include <migraphx/op/softmax.hpp>
 #include <migraphx/op/argmax.hpp>
 #include <migraphx/op/argmin.hpp>
+#include <migraphx/op/topk.hpp>
 #include <migraphx/shape_for_each.hpp>
 #include <migraphx/iterator_for.hpp>
 #include <migraphx/par_dfor.hpp>
@@ -772,6 +773,74 @@ struct cpu_logsoftmax
         return result;
     }
 };
+
+// struct cpu_topk
+// {
+//     op::topk op;
+    
+//     template <class Self, class F>
+//     static auto reflect(Self& self, F f)
+//     {
+//         return migraphx::reflect(self.op, f);
+//     }
+
+//     std::string name() const { return "cpu::topk"; }
+//     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
+
+//     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
+//     {
+//         argument result{output_shape};
+
+//         visit_all(result, args[0])([&](auto output, auto input) {
+            
+//         });
+//         // auto batch_lens     = output_shape.lens();
+//         // std::size_t n_dims  = batch_lens[op.axis];
+//         // batch_lens[op.axis] = 1;
+//         // shape batch_shape{shape::int32_type, batch_lens};
+
+//         // // use a parallel implementation to acheive better performance
+//         // // one thread for one batch
+//         // visit_all(result, args[0])([&](auto output, auto input) {
+//         //     using value_type = typename decltype(input)::value_type;
+//         //     std::vector<value_type> batch_max(batch_shape.elements(),
+//         //                                       std::numeric_limits<value_type>::lowest());
+//         //     std::vector<value_type> batch_sum(batch_shape.elements(), value_type(0));
+
+//         //     par_for(batch_shape.elements(), [&](auto i) {
+//         //         auto idx = batch_shape.multi(i);
+//         //         for(std::size_t j = 0; j < n_dims; ++j)
+//         //         {
+//         //             idx[op.axis] = j;
+//         //             batch_max[i] = std::max(batch_max[i], input(idx.begin(), idx.end()));
+//         //         }
+
+//         //         for(std::size_t j = 0; j < n_dims; ++j)
+//         //         {
+//         //             idx[op.axis]      = j;
+//         //             std::size_t index = output_shape.index(idx);
+//         //             output[index]     = input[index] - batch_max[i];
+//         //         }
+
+//         //         for(std::size_t j = 0; j < n_dims; ++j)
+//         //         {
+//         //             idx[op.axis] = j;
+//         //             batch_sum[i] += std::exp(output(idx.begin(), idx.end()));
+//         //         }
+
+//         //         batch_sum[i] = std::log(batch_sum[i]);
+
+//         //         for(std::size_t j = 0; j < n_dims; ++j)
+//         //         {
+//         //             idx[op.axis] = j;
+//         //             output(idx.begin(), idx.end()) -= batch_sum[i];
+//         //         }
+//         //     });
+//         // });
+
+//         return result;
+//     }
+// };
 
 struct cpu_apply
 {
