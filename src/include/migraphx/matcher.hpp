@@ -374,13 +374,6 @@ MIGRAPHX_PRED_MATCHER(same_input_shapes, instruction_ref ins)
         ins->inputs().begin(), ins->inputs().end(), [&](auto x) { return x->get_shape() == s; });
 }
 
-MIGRAPHX_BASIC_MATCHER(output, const matcher_context& ctx, instruction_ref ins)
-{
-    if(ins->outputs().size() == 1)
-        return ins->outputs().front();
-    return ctx.not_found();
-}
-
 MIGRAPHX_BASIC_MATCHER(used_once, const matcher_context& ctx, instruction_ref ins)
 {
     if(ins->outputs().size() == 1)
@@ -489,25 +482,51 @@ inline auto arg(std::size_t i)
     });
 }
 
+inline auto noutputs(std::size_t n)
+{
+    return make_basic_pred_matcher([=](instruction_ref ins) { return ins->outputs().size() == n; });
+}
+
+inline auto output_at(std::size_t i)
+{
+    return make_basic_fun_matcher([=](const matcher_context& ctx, instruction_ref ins) {
+        if(i < ins->outputs().size())
+            return ins->outputs()[i];
+        return ctx.not_found();
+    });
+}
+
 // Workaround for bugs in clang
 template <std::size_t...>
-struct args_impl_ints
+struct matcher_impl_ints
 {
 };
 
-template <std::size_t... Ns, class... Ms>
-auto args_impl(args_impl_ints<Ns...>, Ms... ms)
+template <std::size_t... Ns, class Size, class At, class... Ms>
+auto match_each_impl(matcher_impl_ints<Ns...>, Size s, At a, Ms... ms)
 {
-    return match::all_of(nargs(sizeof...(Ns)), arg(Ns)(ms)...);
+    return match::all_of(s(sizeof...(Ns)), a(Ns)(ms)...);
+}
+
+template <class Size, class At, class... Ms>
+auto match_each(Size s, At a, Ms... ms)
+{
+    return sequence_c<sizeof...(Ms)>([=](auto... is) {
+        // It needs to be written as `decltype(is)::value` for gcc 5
+        return match_each_impl(matcher_impl_ints<decltype(is)::value...>{}, s, a, ms...);
+    });
 }
 
 template <class... Ms>
 auto args(Ms... ms)
 {
-    return sequence_c<sizeof...(Ms)>([=](auto... is) {
-        // It needs to be written as `decltype(is)::value` for gcc 5
-        return args_impl(args_impl_ints<decltype(is)::value...>{}, ms...);
-    });
+    return match_each(&nargs, &arg, ms...);
+}
+
+template <class... Ms>
+auto output(Ms... ms)
+{
+    return match_each(&noutputs, &output_at, ms...);
 }
 
 inline auto either_arg(std::size_t i, std::size_t j)

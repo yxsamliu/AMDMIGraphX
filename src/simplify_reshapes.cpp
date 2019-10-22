@@ -260,7 +260,7 @@ void simplify_reshapes::apply(program& p) const
                                 find_reshaper{},
                                 find_transpose{},
                                 find_concat_transpose{},
-                                find_reshape_pooling{},
+                                // find_reshape_pooling{},
                                 find_nested_concat{});
         }
     }
