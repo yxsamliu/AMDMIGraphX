@@ -47,28 +47,42 @@ struct find_stack_mul
 {
     auto matcher() const
     {
-        return match::output(match::skip_output(match::name("as_shape"))(op_constant("mul", "x", "a").bind("mul1")), 
-                             match::skip_output(match::name("as_shape"))(op_constant("mul", "y", "b").bind("mul2")));
+        return match::output(
+            match::skip_output(match::name("as_shape"))(op_constant("mul", "x", "a").bind("mul1")),
+            match::skip_output(match::name("as_shape"))(op_constant("mul", "y", "b").bind("mul2")));
     }
 
     static shape compute_stride_shape(const shape& input, std::vector<std::size_t> n)
     {
         std::vector<std::size_t> lens;
-        std::transform(input.lens().begin(), input.lens().end(), n.begin(), std::back_inserter(lens), std::divides<>{});
+        std::transform(input.lens().begin(),
+                       input.lens().end(),
+                       n.begin(),
+                       std::back_inserter(lens),
+                       std::divides<>{});
 
         std::vector<std::size_t> strides;
-        std::transform(input.strides().begin(), input.strides().end(), n.begin(), std::back_inserter(lens), std::multiplies<>{});
-        return {input.type(), lens, strides };
+        std::transform(input.strides().begin(),
+                       input.strides().end(),
+                       n.begin(),
+                       std::back_inserter(lens),
+                       std::multiplies<>{});
+        return {input.type(), lens, strides};
     }
 
-    static std::vector<std::size_t> get_ratio(std::vector<std::size_t> x, std::vector<std::size_t> y)
+    static std::vector<std::size_t> get_ratio(std::vector<std::size_t> x,
+                                              std::vector<std::size_t> y)
     {
         std::vector<std::size_t> result;
-        std::transform(x.begin(), x.end(), y.begin(), std::back_inserter(result), [](auto a, auto b) -> std::size_t {
-            if (b == 0)
-                return 1;
-            return a/b;
-        });
+        std::transform(x.begin(),
+                       x.end(),
+                       y.begin(),
+                       std::back_inserter(result),
+                       [](auto a, auto b) -> std::size_t {
+                           if(b == 0)
+                               return 1;
+                           return a / b;
+                       });
         return result;
     }
 
@@ -78,10 +92,10 @@ struct find_stack_mul
         auto y = ins->get_shape();
 
         auto strides = get_ratio(y.strides(), x.strides());
-        auto lens = get_ratio(x.lens(), y.lens());
-        if (lens != strides)
+        auto lens    = get_ratio(x.lens(), y.lens());
+        if(lens != strides)
             return {};
-        if (std::any_of(lens.begin(), lens.end(), [](auto z) { return z != 0; }))
+        if(std::any_of(lens.begin(), lens.end(), [](auto z) { return z != 0; }))
             return {};
         return lens;
     }
@@ -89,63 +103,74 @@ struct find_stack_mul
     void apply(program& p, match::matcher_result r) const
     {
         auto ins      = r.result;
-        auto mul1_ins    = r.instructions["mul1"];
-        auto mul2_ins    = r.instructions["mul2"];
+        auto mul1_ins = r.instructions["mul1"];
+        auto mul2_ins = r.instructions["mul2"];
         auto a_ins    = r.instructions["a"];
         auto b_ins    = r.instructions["b"];
         auto x_ins    = r.instructions["x"];
         auto y_ins    = r.instructions["y"];
 
         // mul2 should be the later instruction
-        if (std::distance(ins, mul1_ins) > std::distance(ins, mul2_ins))
+        if(std::distance(ins, mul1_ins) > std::distance(ins, mul2_ins))
         {
             std::swap(mul1_ins, mul2_ins);
             std::swap(a_ins, b_ins);
             std::swap(x_ins, y_ins);
         }
 
-        if (x_ins != y_ins)
+        if(x_ins != y_ins)
         {
-            if (x_ins->name() == "as_shape")
+            if(x_ins->name() == "as_shape")
                 return;
-            if (y_ins->name() != "as_shape")
+            if(y_ins->name() != "as_shape")
                 return;
-            if (y_ins->inputs().front() != x_ins)
+            if(y_ins->inputs().front() != x_ins)
                 return;
             auto stride = get_stride(y_ins);
             if(stride.empty())
                 return;
 
             auto op = any_cast<op::as_shape>(y_ins->get_operator());
-            if (a_ins->name() == "broadcast")
+            if(a_ins->name() == "broadcast")
             {
-                auto input = a_ins->inputs().front();
+                auto input        = a_ins->inputs().front();
                 auto broadcast_op = any_cast<op::broadcast>(a_ins->get_operator());
-                auto start = stride.begin()+broadcast_op.axis;
+                auto start        = stride.begin() + broadcast_op.axis;
 
-                std::vector<std::size_t> broadcast_stride(start, start+input->get_shape().lens().size());
-                auto as_shape_ins = p.insert_instruction(a_ins, op::as_shape{compute_stride_shape(input->get_shape(), broadcast_stride)}, input);
-                a_ins = p.insert_instruction(a_ins, op::broadcast{broadcast_op.axis, y_ins->get_shape().lens()}, as_shape_ins);
-            } 
-            else if (a_ins->get_shape().standard())
+                std::vector<std::size_t> broadcast_stride(start,
+                                                          start + input->get_shape().lens().size());
+                auto as_shape_ins = p.insert_instruction(
+                    a_ins,
+                    op::as_shape{compute_stride_shape(input->get_shape(), broadcast_stride)},
+                    input);
+                a_ins = p.insert_instruction(
+                    a_ins,
+                    op::broadcast{broadcast_op.axis, y_ins->get_shape().lens()},
+                    as_shape_ins);
+            }
+            else if(a_ins->get_shape().standard())
             {
-                a_ins = p.insert_instruction(std::next(a_ins), op::as_shape{compute_stride_shape(a_ins->get_shape(), stride)}, a_ins);
+                a_ins = p.insert_instruction(
+                    std::next(a_ins),
+                    op::as_shape{compute_stride_shape(a_ins->get_shape(), stride)},
+                    a_ins);
             }
             else
             {
                 return;
             }
-            if (mul1_ins->get_shape().standard())
-                mul1_ins = p.insert_instruction(std::next(mul1_ins), op::as_shape{compute_stride_shape(mul1_ins->get_shape(), stride)}, mul1_ins);
+            if(mul1_ins->get_shape().standard())
+                mul1_ins = p.insert_instruction(
+                    std::next(mul1_ins),
+                    op::as_shape{compute_stride_shape(mul1_ins->get_shape(), stride)},
+                    mul1_ins);
             else
                 return;
             return;
         }
 
-
         auto c = p.insert_instruction(mul2_ins, op::div{}, b_ins, a_ins);
         p.replace_instruction(mul2_ins, op::mul{}, c, mul1_ins);
-
     }
 };
 
