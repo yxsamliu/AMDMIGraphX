@@ -777,7 +777,7 @@ struct cpu_logsoftmax
 // struct cpu_topk
 // {
 //     op::topk op;
-    
+
 //     template <class Self, class F>
 //     static auto reflect(Self& self, F f)
 //     {
@@ -785,14 +785,15 @@ struct cpu_logsoftmax
 //     }
 
 //     std::string name() const { return "cpu::topk"; }
-//     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
+//     shape compute_shape(const std::vector<shape>& inputs) const { return
+//     op.compute_shape(inputs); }
 
 //     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
 //     {
 //         argument result{output_shape};
 
 //         visit_all(result, args[0])([&](auto output, auto input) {
-            
+
 //         });
 //         // auto batch_lens     = output_shape.lens();
 //         // std::size_t n_dims  = batch_lens[op.axis];

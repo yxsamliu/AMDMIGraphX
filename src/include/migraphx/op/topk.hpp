@@ -25,8 +25,8 @@ struct topk
         check_shapes{{inputs[0]}}.standard();
         auto dims = inputs[0].lens();
         dims.insert(dims.begin(), 2);
-        
-        for (size_t i = 1; i < dims.size(); i++)
+
+        for(size_t i = 1; i < dims.size(); i++)
         {
             dims[i] = k;
         }
