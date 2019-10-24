@@ -774,27 +774,31 @@ struct cpu_logsoftmax
     }
 };
 
-// struct cpu_topk
-// {
-//     op::topk op;
+struct cpu_topk
+{
+    op::topk op;
 
-//     template <class Self, class F>
-//     static auto reflect(Self& self, F f)
-//     {
-//         return migraphx::reflect(self.op, f);
-//     }
+    template <class Self, class F>
+    static auto reflect(Self& self, F f)
+    {
+        return migraphx::reflect(self.op, f);
+    }
 
-//     std::string name() const { return "cpu::topk"; }
-//     shape compute_shape(const std::vector<shape>& inputs) const { return
-//     op.compute_shape(inputs); }
+    std::string name() const { return "cpu::topk"; }
+    shape compute_shape(const std::vector<shape>& inputs) const { return
+    op.compute_shape(inputs); }
 
-//     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
-//     {
-//         argument result{output_shape};
+    argument compute(context&, const shape& output_shape, std::vector<argument> args) const
+    {
+        argument result{output_shape};
 
-//         visit_all(result, args[0])([&](auto output, auto input) {
-
-//         });
+        visit_all(result, args[0])([&](auto output, auto input) {
+            using value_type = typename decltype(input)::value_type;
+            for(size_t i = 0; i < input.get_shape().elements(); i++)
+            {
+                std::cout << input[i] << std::endl;
+            } 
+        });
 //         // auto batch_lens     = output_shape.lens();
 //         // std::size_t n_dims  = batch_lens[op.axis];
 //         // batch_lens[op.axis] = 1;
@@ -839,9 +843,9 @@ struct cpu_logsoftmax
 //         //     });
 //         // });
 
-//         return result;
-//     }
-// };
+        return result;
+    }
+};
 
 struct cpu_apply
 {
