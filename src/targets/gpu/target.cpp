@@ -15,6 +15,7 @@
 #include <migraphx/eliminate_contiguous.hpp>
 #include <migraphx/eliminate_common_subexpression.hpp>
 #include <migraphx/rewrite_batchnorm.hpp>
+#include <migraphx/decompose.hpp>
 #include <migraphx/rewrite_rnn.hpp>
 #include <migraphx/rewrite_pooling.hpp>
 #include <migraphx/eliminate_concat.hpp>
@@ -48,6 +49,7 @@ std::vector<pass> target::get_passes(migraphx::context& gctx) const
         dead_code_elimination{},
         rewrite_rnn{},
         rewrite_pooling{},
+        decompose{},
         dead_code_elimination{},
         eliminate_common_subexpression{},
         dead_code_elimination{},
