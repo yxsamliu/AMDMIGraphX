@@ -276,19 +276,19 @@ struct find_add_dots
 
     auto matcher() const
     {
-        return match::name("add")(
-            match::args(match::name("dot")(match::used_once()).bind("a"), match::name("dot")(match::used_once()).bind("b")));
+        return match::name("add")(match::args(match::name("dot")(match::used_once()).bind("a"),
+                                              match::name("dot")(match::used_once()).bind("b")));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins       = r.result;
-        auto a_dot    = r.instructions["a"];
+        auto ins   = r.result;
+        auto a_dot = r.instructions["a"];
         auto a_x   = a_dot->inputs().at(0);
-        auto a_y = a_dot->inputs().at(1);
-        auto b_dot    = r.instructions["b"];
+        auto a_y   = a_dot->inputs().at(1);
+        auto b_dot = r.instructions["b"];
         auto b_x   = b_dot->inputs().at(0);
-        auto b_y = b_dot->inputs().at(1);
+        auto b_y   = b_dot->inputs().at(1);
 
         auto a_op   = any_cast<op::dot>(a_dot->get_operator());
         auto b_op   = any_cast<op::dot>(b_dot->get_operator());
@@ -297,11 +297,10 @@ struct find_add_dots
         if(a_op != b_op)
             return;
 
-        auto concat_x   = p.insert_instruction(ins, op::concat{1}, a_x, b_x);
+        auto concat_x = p.insert_instruction(ins, op::concat{1}, a_x, b_x);
         auto concat_y = p.insert_instruction(ins, op::concat{0}, a_y, b_y);
         p.replace_instruction(ins, new_op, concat_x, concat_y);
     }
-
 };
 
 void simplify_algebra::apply(program& p) const
