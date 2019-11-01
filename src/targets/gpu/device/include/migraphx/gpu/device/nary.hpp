@@ -381,6 +381,24 @@ inline auto nary(hipStream_t stream, argument result, argument arg)
     return [=](auto f) { nary_impl(stream, f, result, arg); };
 }
 
+template<class F>
+auto nary_impl_binary_one_scalar(hipStream_t stream, F f, argument result, argument arg, argument barg)
+{
+    MIGRAPHX_TRACE_NARY_FUNCTION
+    shape s{result.get_shape().type(), result.get_shape().lens()};
+
+    hip_visit_all(s, result, arg, barg)([&](auto standard_shape, auto output, auto input0, auto input1) {
+        if (arg.get_shape().scalar())
+        {
+            mi_launch(stream, standard_shape)([=](auto idx) { output[idx] = f(input0[0], input1[idx]); });
+        }
+        else
+        {
+            mi_launch(stream, standard_shape)([=](auto idx) { output[idx] = f(input0[idx], input1[0]); });
+        }
+    });
+}
+
 // Binary
 inline auto nary(hipStream_t stream, argument result, argument arg, argument barg)
 {
@@ -392,6 +410,10 @@ inline auto nary(hipStream_t stream, argument result, argument arg, argument bar
                 nary_broadcast_vec_impl(stream, f, result, barg, arg);
             else
                 nary_broadcast_impl(stream, f, result, barg, arg);
+        }
+        else if (arg.get_shape().scalar() or barg.get_shape().scalar())
+        {
+            nary_impl_binary_one_scalar(stream, f, result, arg, barg);
         }
         else
         {
