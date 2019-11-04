@@ -12,6 +12,7 @@
 #include <migraphx/gpu/device/mul_add_relu.hpp>
 #include <migraphx/gpu/device/erf_factor.hpp>
 #include <migraphx/gpu/device/add.hpp>
+#include <migraphx/gpu/device/mul.hpp>
 #include <migraphx/instruction.hpp>
 #include <migraphx/array.hpp>
 #include <migraphx/op/clip.hpp>
@@ -260,6 +261,25 @@ struct hip_add_tanh : binary_device<hip_add_tanh, &device::add_tanh>
 {
 };
 
+struct hip_trimul
+{
+    std::string name() const { return "hip::trimul"; }
+    shape compute_shape(const std::vector<shape>& inputs) const
+    {
+        check_shapes{inputs, *this}.has(4);
+        return inputs.front();
+    }
+    argument compute(context& ctx, const shape&, const std::vector<argument>& args) const
+    {
+        device::mul(ctx.get_stream().get(), args.at(3), args.at(0), args.at(1), args.at(2));
+        return args.at(3);
+    }
+    std::ptrdiff_t output_alias(const std::vector<shape>& shapes) const
+    {
+        return shapes.size() - 1;
+    }
+};
+
 struct hip_erf_factor
 {
     float factor = 1.0f;
@@ -444,6 +464,37 @@ struct find_triadd
 
         args.back() = ins->inputs().back();
         p.replace_instruction(ins, hip_triadd{}, args);
+    }
+};
+
+struct find_trimul
+{
+    auto matcher() const
+    {
+        return match::name("gpu::mul")(match::either_arg(0, 1)(
+            match::name("gpu::mul")(match::used_once()).bind("mul"),
+            match::any(match::any_of(match::name("@literal"),
+                                     match::any_of[match::inputs()](match::standard_shape())))
+                .bind("input")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto mul_ins   = r.instructions["mul"];
+        auto input_ins = r.instructions["input"];
+        auto ins       = r.result;
+        auto args      = mul_ins->inputs();
+        assert(mul_ins != input_ins);
+
+        auto is_broadcasted = [](auto arg) { return arg->get_shape().broadcasted(); };
+        if(std::count_if(args.begin(), args.end(), is_broadcasted) > 1)
+            return;
+        args.insert(args.begin(), input_ins);
+        move_standard_front(args);
+        move_broadcasted_back(args);
+
+        args.back() = ins->inputs().back();
+        p.replace_instruction(ins, hip_trimul{}, args);
     }
 };
 
@@ -679,7 +730,8 @@ void fuse_ops::apply(program& p) const
         find_add_unary{"gpu::relu", hip_add_relu{}, hip_triadd_relu{}},
         find_add_unary{"gpu::sigmoid", hip_add_sigmoid{}, hip_triadd_sigmoid{}},
         find_add_unary{"gpu::tanh", hip_add_tanh{}, hip_triadd_tanh{}},
-        find_add_clip{}
+        find_add_clip{},
+        find_trimul{}
     );
     // clang-format on
 }
