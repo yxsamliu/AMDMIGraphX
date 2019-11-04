@@ -301,10 +301,9 @@ struct find_div_gemm
 {
     auto matcher() const
     {
-        return match::name("div")(
-            match::args(match::name("dot")(match::used_once()).bind("a"),
-                        match::name("multibroadcast")(
-                            match::arg(0)(match::is_constant().bind("alpha")))));
+        return match::name("div")(match::args(
+            match::name("dot")(match::used_once()).bind("a"),
+            match::name("multibroadcast")(match::arg(0)(match::is_constant().bind("alpha")))));
     }
 
     void apply(program& p, match::matcher_result r) const
@@ -332,26 +331,26 @@ struct find_add_gemm
 {
     auto matcher() const
     {
-        return match::name("add")(
-            match::either_arg(0, 1)(match::name("dot")(match::used_once()).bind("ab"),
-                        match::none_of(match::name("@param"), match::name("@literal")).bind("c")));
+        return match::name("add")(match::either_arg(0, 1)(
+            match::name("dot")(match::used_once()).bind("ab"),
+            match::none_of(match::name("@param"), match::name("@literal")).bind("c")));
     }
 
     void apply(program& p, match::matcher_result r) const
     {
-        auto ins       = r.result;
-        auto ins_dot   = r.instructions["ab"];
-        auto ins_c = r.instructions["c"];
+        auto ins     = r.result;
+        auto ins_dot = r.instructions["ab"];
+        auto ins_c   = r.instructions["c"];
 
         // if it is already three arguments, cannot merge
-        if (ins_dot->inputs().size() == 3)
+        if(ins_dot->inputs().size() == 3)
             return;
-        
-        if (ins_c->outputs().size() > 1)
+
+        if(ins_c->outputs().size() > 1)
             return;
 
         auto c_alias = instruction::get_output_alias(ins_c);
-        if (c_alias->inputs().empty())
+        if(c_alias->inputs().empty())
             return;
 
         auto dot_op = any_cast<op::dot>(ins_dot->get_operator());
