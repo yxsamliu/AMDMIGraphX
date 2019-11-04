@@ -169,62 +169,6 @@ struct find_inner_broadcast
     }
 };
 
-// a / sqrt(b) => a * rsqrt(b)
-struct find_div_sqrt
-{
-    auto matcher() const
-    {
-        return match::name("div")(
-            match::used_once(),
-            match::args(match::any().bind("a"),
-                        match::name("multibroadcast")(
-                            match::args(match::name("sqrt")(match::used_once()).bind("b")))
-                            .bind("bcst")));
-    }
-
-    void apply(program& p, match::matcher_result r) const
-    {
-        auto ins      = r.result;
-        auto a_ins    = r.instructions["a"];
-        auto b_ins    = r.instructions["b"];
-        auto bcst_ins = r.instructions["bcst"];
-
-        p.replace_instruction(b_ins, op::rsqrt{}, b_ins->inputs());
-        p.replace_instruction(ins, op::mul{}, a_ins, bcst_ins);
-    }
-};
-
-// gemm[alpha = 1, b = 0] / c  ==> gemm[alpha = 1/c, b = 0]
-struct find_div_gemm
-{
-    auto matcher() const
-    {
-        return match::name("div")(match::used_once(),
-                                  match::args(match::name("dot").bind("a"),
-                                              match::name("multibroadcast")(
-                                                  match::args(match::is_constant().bind("alpha")))
-                                                  .bind("bcst")));
-    }
-
-    void apply(program& p, match::matcher_result r) const
-    {
-        auto ins       = r.result;
-        auto dot_ins   = r.instructions["a"];
-        auto one_alpha = r.instructions["alpha"];
-
-        // ensure alpha is a scalar
-        if(one_alpha->get_shape().elements() != 1)
-            return;
-
-        float scale = one_alpha->get_literal().at<float>();
-        auto dot_op = any_cast<op::dot>(dot_ins->get_operator());
-        auto r_dot  = p.replace_instruction(
-            dot_ins, op::dot{dot_op.alpha / scale, dot_op.beta / scale}, dot_ins->inputs());
-
-        p.replace_instruction(ins, r_dot);
-    }
-};
-
 bool axis_equal(const std::vector<std::size_t>& x,
                 const std::vector<std::size_t>& y,
                 std::size_t axis)
@@ -328,6 +272,96 @@ struct find_add_convs
     }
 };
 
+// a / sqrt(b) => a * rsqrt(b)
+struct find_div_sqrt
+{
+    auto matcher() const
+    {
+        return match::name("div")(
+            match::args(match::any().bind("a"),
+                        match::name("multibroadcast")(
+                            match::arg(0)(match::name("sqrt")(match::used_once()).bind("b")))
+                            .bind("bcst")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins      = r.result;
+        auto a_ins    = r.instructions["a"];
+        auto b_ins    = r.instructions["b"];
+        auto bcst_ins = r.instructions["bcst"];
+
+        p.replace_instruction(b_ins, op::rsqrt{}, b_ins->inputs());
+        p.replace_instruction(ins, op::mul{}, a_ins, bcst_ins);
+    }
+};
+
+// gemm[alpha = 1, b = 0] / c  ==> gemm[alpha = 1/c, b = 0]
+struct find_div_gemm
+{
+    auto matcher() const
+    {
+        return match::name("div")(
+            match::args(match::name("dot")(match::used_once()).bind("a"),
+                        match::name("multibroadcast")(
+                            match::arg(0)(match::is_constant().bind("alpha")))));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins       = r.result;
+        auto dot_ins   = r.instructions["a"];
+        auto one_alpha = r.instructions["alpha"];
+
+        // ensure alpha is a scalar
+        if(one_alpha->get_shape().elements() != 1)
+            return;
+
+        float scale = one_alpha->get_literal().at<float>();
+        auto dot_op = any_cast<op::dot>(dot_ins->get_operator());
+        auto r_dot  = p.replace_instruction(
+            dot_ins, op::dot{dot_op.alpha / scale, dot_op.beta / scale}, dot_ins->inputs());
+
+        p.replace_instruction(ins, r_dot);
+    }
+};
+
+// merge gemm[alpha, beta](a, b) + c == > gemm[alpha, 1.0](a, b, c)
+// only c is used once and c is not a literal
+struct find_add_gemm
+{
+    auto matcher() const
+    {
+        return match::name("add")(
+            match::either_arg(0, 1)(match::name("dot")(match::used_once()).bind("ab"),
+                        match::none_of(match::name("@param"), match::name("@literal")).bind("c")));
+    }
+
+    void apply(program& p, match::matcher_result r) const
+    {
+        auto ins       = r.result;
+        auto ins_dot   = r.instructions["ab"];
+        auto ins_c = r.instructions["c"];
+
+        // if it is already three arguments, cannot merge
+        if (ins_dot->inputs().size() == 3)
+            return;
+        
+        if (ins_c->outputs().size() > 1)
+            return;
+
+        auto c_alias = instruction::get_output_alias(ins_c);
+        if (c_alias->inputs().empty())
+            return;
+
+        auto dot_op = any_cast<op::dot>(ins_dot->get_operator());
+        auto inputs = ins_dot->inputs();
+        inputs.push_back(ins_c);
+
+        p.replace_instruction(ins, op::dot{dot_op.alpha, 1.0f}, inputs);
+    }
+};
+
 void simplify_algebra::apply(program& p) const
 {
     // Run simplifications multiple times
@@ -336,6 +370,7 @@ void simplify_algebra::apply(program& p) const
         match::find_matches(p,
                             find_div_sqrt{},
                             find_div_gemm{},
+                            find_add_gemm{},
                             find_inner_broadcast{},
                             find_double_add_lit_broadcast{},
                             find_add_lit_broadcast{},

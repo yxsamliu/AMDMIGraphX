@@ -645,10 +645,10 @@ struct find_div_erf
 {
     auto matcher() const
     {
-        return match::name("gpu::erf")(match::arg(0)(
+        return match::name("gpu::erf")(match::arg(0)(match::used_once(), 
             match::name("gpu::div")(match::arg(0)(match::any().bind("x")),
                                     match::arg(1)(match::name("multibroadcast")(
-                                        match::arg(0)(match::any().bind("factor")))))));
+                                        match::arg(0)(match::name("@literal").bind("factor")))))));
     }
 
     void apply(program& p, match::matcher_result r) const
