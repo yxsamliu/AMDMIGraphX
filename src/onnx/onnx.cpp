@@ -220,7 +220,8 @@ struct onnx_parser
         return prog.add_instruction(op::contiguous{}, ins);
     }
 
-    instruction_ref add_broadcastable_binary_op(instruction_ref arg0, instruction_ref arg1, operation x)
+    instruction_ref
+    add_broadcastable_binary_op(instruction_ref arg0, instruction_ref arg1, operation x)
     {
         if(arg0->get_shape().lens() != arg1->get_shape().lens())
         {
