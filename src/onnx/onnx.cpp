@@ -147,8 +147,7 @@ struct onnx_parser
         });
     }
 
-    template <class T>
-    void add_binary_op(std::string name, T x)
+    void add_binary_op(std::string name, operation x)
     {
         add_op(name, [this, x](attribute_map attributes, std::vector<instruction_ref> args) {
             if(args.size() != 2)
@@ -221,8 +220,7 @@ struct onnx_parser
         return prog.add_instruction(op::contiguous{}, ins);
     }
 
-    template <class T>
-    instruction_ref add_broadcastable_binary_op(instruction_ref arg0, instruction_ref arg1, T x)
+    instruction_ref add_broadcastable_binary_op(instruction_ref arg0, instruction_ref arg1, operation x)
     {
         if(arg0->get_shape().lens() != arg1->get_shape().lens())
         {
@@ -240,16 +238,14 @@ struct onnx_parser
         }
     }
 
-    template <class T>
-    void add_generic_op(std::string name, T x)
+    void add_generic_op(std::string name, operation x)
     {
         add_op(name, [this, x](const attribute_map&, std::vector<instruction_ref> args) {
             return prog.add_instruction(x, args);
         });
     }
 
-    template <class T>
-    void add_variadic_op(std::string name, T x)
+    void add_variadic_op(std::string name, operation x)
     {
         add_op(name, [this, x](const attribute_map&, std::vector<instruction_ref> args) {
             return std::accumulate(std::next(args.begin()),
