@@ -153,7 +153,7 @@ rocm_create_package(
     MAINTAINER "Paul Fultz II <paul.fultz@amd.com>"
     LDCONFIG
     PTH
-    DEPENDS miopen-hip rocblas hip_hcc half
+    DEPENDS miopen-hip rocblas hip-hcc half
 )
 
 add_subdirectory(src)
