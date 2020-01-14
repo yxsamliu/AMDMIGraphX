@@ -11,7 +11,8 @@ namespace gpu {
 
 struct context;
 
-struct hip_reduce_sum_square : reduce_op<hip_reduce_sum_square, op::reduce_sum_square, device::reduce_sum_square>
+struct hip_reduce_sum_square
+    : reduce_op<hip_reduce_sum_square, op::reduce_sum_square, device::reduce_sum_square>
 {
     hip_reduce_sum_square() {}
     hip_reduce_sum_square(const op::reduce_sum_square& op_ref) : reduce_op(op_ref) {}

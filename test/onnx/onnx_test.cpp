@@ -886,7 +886,7 @@ TEST_CASE(pow_test)
 TEST_CASE(reducel1_test)
 {
     migraphx::program p;
-    auto l0     = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
+    auto l0 = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
     auto rl = p.add_instruction(migraphx::op::reduce_l1{{-2}}, l0);
     p.add_instruction(migraphx::op::squeeze{{-2}}, rl);
     auto prog = optimize_onnx("reducel1_test.onnx");
@@ -898,7 +898,7 @@ TEST_CASE(reducel2_test)
 {
     migraphx::program p;
     auto l0 = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
-    auto rl    = p.add_instruction(migraphx::op::reduce_l2{{-1}}, l0);
+    auto rl = p.add_instruction(migraphx::op::reduce_l2{{-1}}, l0);
     p.add_instruction(migraphx::op::squeeze{{-1}}, rl);
     auto prog = optimize_onnx("reducel2_test.onnx");
 
@@ -908,7 +908,7 @@ TEST_CASE(reducel2_test)
 TEST_CASE(reduce_log_sum_test)
 {
     migraphx::program p;
-    auto l0     = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
+    auto l0 = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
     p.add_instruction(migraphx::op::reduce_log_sum{{-3}}, l0);
     auto prog = optimize_onnx("reduce_log_sum_test.onnx");
 
@@ -918,7 +918,7 @@ TEST_CASE(reduce_log_sum_test)
 TEST_CASE(reduce_log_sum_exp_test)
 {
     migraphx::program p;
-    auto l0     = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
+    auto l0 = p.add_parameter("x", migraphx::shape{migraphx::shape::float_type, {3, 4, 5, 6}});
     p.add_instruction(migraphx::op::reduce_log_sum_exp{{-4}}, l0);
     auto prog = optimize_onnx("reduce_log_sum_exp_test.onnx");
 
