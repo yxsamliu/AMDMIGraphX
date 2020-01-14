@@ -18,6 +18,11 @@ struct reduce_log_sum_exp : reduce_op<reduce_log_sum_exp>
         return [=](auto x, auto y) { return x + y; };
     }
 
+    auto input() const
+    {
+        return [=](auto val) { return std::exp(make_signed(val)); };
+    }
+
     auto output(const shape&) const
     {
         return [=](auto val) { return std::log(make_signed(val)); };

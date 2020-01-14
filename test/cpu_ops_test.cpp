@@ -1975,6 +1975,68 @@ TEST_CASE(clip_test)
     EXPECT(migraphx::verify_range(results_vector, gold));
 }
 
+TEST_CASE(reduce_l1_axis0)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {4, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 3, 2, 3}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_l1{{-3}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{7, 9, 8, 9};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_l2_axis1)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {4, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 3, 2, 3}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_l2{{-2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{3.16227766, 2.23606798, 2.23606798, 3.60555128, 3.60555128,
+       3.16227766, 2.23606798, 4.24264069};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_log_sum)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {4, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 3, 2, 3}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_log_sum{{-3}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{1.94591022, 2.19722462, 2.07944155, 2.19722462};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_log_sum_exp)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {4, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 2, 3, 1, 3, 2, 3}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_log_sum_exp{{-1}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{2.31326175, 3.12692785, 3.31326175, 2.31326175, 3.12692785, 3.31326175, 
+      3.12692785,   3.31326175};
+    EXPECT(results_vector == gold);
+}
+
 TEST_CASE(reduce_prod_axis0)
 {
     migraphx::program p;
@@ -2062,6 +2124,21 @@ TEST_CASE(reduce_sum_axis12)
     std::vector<float> results_vector;
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
     std::vector<float> gold{10, 26, 42};
+    EXPECT(results_vector == gold);
+}
+
+TEST_CASE(reduce_sum_square)
+{
+    migraphx::program p;
+    migraphx::shape s{migraphx::shape::float_type, {3, 2, 2}};
+    auto input = migraphx::literal{s, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12}};
+    auto l0    = p.add_literal(input);
+    p.add_instruction(migraphx::op::reduce_sum_square{{1, 2}}, l0);
+    p.compile(migraphx::cpu::target{});
+    auto result = p.eval({});
+    std::vector<float> results_vector;
+    result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
+    std::vector<float> gold{30, 174, 446};
     EXPECT(results_vector == gold);
 }
 
