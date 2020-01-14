@@ -51,11 +51,16 @@
 #include <migraphx/op/quant_convolution.hpp>
 #include <migraphx/op/quant_dot.hpp>
 #include <migraphx/op/pow.hpp>
+#include <migraphx/op/reduce_l1.hpp>
+#include <migraphx/op/reduce_l2.hpp>
+#include <migraphx/op/reduce_log_sum_exp.hpp>
+#include <migraphx/op/reduce_log_sum.hpp>
 #include <migraphx/op/reduce_max.hpp>
 #include <migraphx/op/reduce_mean.hpp>
 #include <migraphx/op/reduce_min.hpp>
 #include <migraphx/op/reduce_prod.hpp>
 #include <migraphx/op/reduce_sum.hpp>
+#include <migraphx/op/reduce_sum_square.hpp>
 #include <migraphx/op/relu.hpp>
 #include <migraphx/op/reshape.hpp>
 #include <migraphx/op/rnn.hpp>

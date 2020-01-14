@@ -11,21 +11,31 @@ inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 namespace device {
 
-struct sum
+// operation
+struct abs
 {
-    template <class T, class U>
-    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
     {
-        return x + y;
+        return (x >= 0) ? x : -x;
     }
 };
 
-struct product
+struct exp
 {
-    template <class T, class U>
-    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
     {
-        return x * y;
+        return ::exp(to_hip_type(x));
+    }
+};
+
+struct log
+{
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
+    {
+        return ::log(to_hip_type(x));
     }
 };
 
@@ -35,6 +45,15 @@ struct id
     MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
     {
         return x;
+    }
+};
+
+struct max
+{
+    template <class T, class U>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
+    {
+        return x > y ? x : y;
     }
 };
 
@@ -48,15 +67,6 @@ struct mean
     }
 };
 
-struct max
-{
-    template <class T, class U>
-    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
-    {
-        return x > y ? x : y;
-    }
-};
-
 struct min
 {
     template <class T, class U>
@@ -66,6 +76,43 @@ struct min
     }
 };
 
+struct product
+{
+    template <class T, class U>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
+    {
+        return x * y;
+    }
+};
+
+struct square
+{
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
+    {
+        return x * x;
+    }
+};
+
+struct sqrt
+{
+    template <class T>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x) const
+    {
+        return ::sqrt(to_hip_type(x));
+    }
+};
+
+struct sum
+{
+    template <class T, class U>
+    MIGRAPHX_DEVICE_CONSTEXPR auto operator()(T x, U y) const
+    {
+        return x + y;
+    }
+};
+
+// init value
 struct lowest
 {
     template <class T>

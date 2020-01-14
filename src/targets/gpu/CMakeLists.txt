@@ -43,11 +43,16 @@ add_library(migraphx_device
     device/mul_add_relu.cpp
     device/pad.cpp
     device/pow.cpp
+    device/reduce_l1.cpp
+    device/reduce_l2.cpp
+    device/reduce_log_sum.cpp
+    device/reduce_log_sum_exp.cpp
     device/reduce_max.cpp
     device/reduce_mean.cpp
     device/reduce_min.cpp
-    device/reduce_sum.cpp
     device/reduce_prod.cpp
+    device/reduce_sum.cpp
+    device/reduce_sum_square.cpp
     device/relu.cpp
     device/round.cpp
     device/rsqrt.cpp
