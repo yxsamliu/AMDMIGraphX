@@ -2001,8 +2001,14 @@ TEST_CASE(reduce_l2_axis1)
     auto result = p.eval({});
     std::vector<float> results_vector;
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
-    std::vector<float> gold{3.16227766, 2.23606798, 2.23606798, 3.60555128, 3.60555128,
-       3.16227766, 2.23606798, 4.24264069};
+    std::vector<float> gold{3.16227766,
+                            2.23606798,
+                            2.23606798,
+                            3.60555128,
+                            3.60555128,
+                            3.16227766,
+                            2.23606798,
+                            4.24264069};
     EXPECT(results_vector == gold);
 }
 
@@ -2032,8 +2038,14 @@ TEST_CASE(reduce_log_sum_exp)
     auto result = p.eval({});
     std::vector<float> results_vector;
     result.visit([&](auto output) { results_vector.assign(output.begin(), output.end()); });
-    std::vector<float> gold{2.31326175, 3.12692785, 3.31326175, 2.31326175, 3.12692785, 3.31326175, 
-      3.12692785,   3.31326175};
+    std::vector<float> gold{2.31326175,
+                            3.12692785,
+                            3.31326175,
+                            2.31326175,
+                            3.12692785,
+                            3.31326175,
+                            3.12692785,
+                            3.31326175};
     EXPECT(results_vector == gold);
 }
 

@@ -4100,7 +4100,9 @@ template struct test_reduce_op_large<migraphx::op::reduce_mean, 1, migraphx::sha
 template struct test_reduce_op_large<migraphx::op::reduce_min, 1, migraphx::shape::float_type>;
 template struct test_reduce_op_large<migraphx::op::reduce_prod, 2, migraphx::shape::float_type>;
 template struct test_reduce_op_large<migraphx::op::reduce_sum, 1, migraphx::shape::float_type>;
-template struct test_reduce_op_large<migraphx::op::reduce_sum_square, 2, migraphx::shape::float_type>;
+template struct test_reduce_op_large<migraphx::op::reduce_sum_square,
+                                     2,
+                                     migraphx::shape::float_type>;
 
 template <class Op, int Axis, migraphx::shape::type_t T>
 struct test_reduce_op_small : verify_program<test_reduce_op_small<Op, Axis, T>>
@@ -4133,7 +4135,7 @@ struct test_reduce_log_sum : verify_program<test_reduce_log_sum>
     {
         migraphx::program p;
         migraphx::shape s{migraphx::shape::float_type, {3, 4, 8, 8}};
-        auto x = p.add_parameter("x", s);
+        auto x  = p.add_parameter("x", s);
         auto ax = p.add_instruction(migraphx::op::abs{}, x);
         p.add_instruction(migraphx::op::reduce_log_sum{{0, 1}}, ax);
         return p;
@@ -4146,7 +4148,7 @@ struct test_reduce_log_sum_exp : verify_program<test_reduce_log_sum_exp>
     {
         migraphx::program p;
         migraphx::shape s{migraphx::shape::float_type, {3, 4, 8, 8}};
-        auto x = p.add_parameter("x", s);
+        auto x  = p.add_parameter("x", s);
         auto ax = p.add_instruction(migraphx::op::clip{2.0f, -2.0f}, x);
         p.add_instruction(migraphx::op::reduce_log_sum_exp{{0, 1}}, ax);
         return p;
