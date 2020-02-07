@@ -2,7 +2,7 @@
 #define MIGRAPHX_GUARD_MIGRAPHLIB_INSTRUCTION_HPP
 
 #include <migraphx/literal.hpp>
-#include <migraphx/shape.hpp>
+#include <migraphx/to_shapes.hpp>
 #include <migraphx/instruction_ref.hpp>
 #include <migraphx/operation.hpp>
 #include <migraphx/erase.hpp>
@@ -14,7 +14,6 @@ namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
 
 shape compute_shape(const operation& op, const std::vector<instruction_ref>& args);
-std::vector<shape> to_shapes(const std::vector<instruction_ref>& args);
 
 struct instruction
 {

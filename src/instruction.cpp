@@ -221,14 +221,6 @@ instruction_ref instruction::get_output_alias(instruction_ref ins, bool shallow)
     return get_output_alias(ins->inputs().at(i));
 }
 
-std::vector<shape> to_shapes(const std::vector<instruction_ref>& args)
-{
-    std::vector<shape> shapes(args.size());
-    std::transform(
-        args.begin(), args.end(), shapes.begin(), [](instruction_ref i) { return i->get_shape(); });
-    return shapes;
-}
-
 shape compute_shape(const operation& op, const std::vector<instruction_ref>& args)
 {
     return op.compute_shape(to_shapes(args));

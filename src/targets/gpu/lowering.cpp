@@ -137,7 +137,7 @@ struct miopen_apply
         add_generic_op<hip_floor>("floor");
 
         add_extend_op<miopen_contiguous, op::contiguous>("contiguous");
-        add_extend_op<hip_concat, op::concat>("concat");
+        // add_extend_op<hip_concat, op::concat>("concat");
         add_extend_op<hip_softmax, op::softmax>("softmax");
         add_extend_op<hip_logsoftmax, op::logsoftmax>("logsoftmax");
         add_extend_op<hip_argmax, op::argmax>("argmax");
@@ -154,6 +154,7 @@ struct miopen_apply
         add_gemm_op<op::dot>("dot");
         add_gemm_op<op::quant_dot>("quant_dot");
 
+        add_concat_op();
         add_lrn_op();
         add_convolution_op();
         add_deconvolution_op();
@@ -306,6 +307,28 @@ struct miopen_apply
             auto output = insert_allocation(ins, ins->get_shape());
             return prog->replace_instruction(
                 ins, miopen_lrn{std::move(ldesc)}, ins->inputs().at(0), output);
+        });
+    }
+
+    void add_concat_op()
+    {
+        apply_map.emplace("concat", [=](instruction_ref ins) {
+            auto&& op   = any_cast<op::concat>(ins->get_operator());
+            auto output = insert_allocation(ins, ins->get_shape());
+            auto offsets = op.compute_offsets(ins->get_shape(), to_shapes(ins->inputs()));
+
+            std::vector<instruction_ref> args = {output};
+            for(std::size_t i = 0; i < ins->inputs().size(); i++)
+            {
+                auto input = ins->inputs()[i];
+                auto offset       = offsets[i];
+                auto byte_offset  = offset * input->get_shape().type_size();
+                auto s = shape{
+                    input->get_shape().type(), input->get_shape().lens(), output->get_shape().strides()};
+                auto load = prog->insert_instruction(ins, op::load{s, byte_offset}, output);
+                args.emplace_back(prog->insert_instruction(ins, hip_copy{}, input, load));
+            }
+            return prog->replace_instruction(ins, op::identity{}, args);
         });
     }
 

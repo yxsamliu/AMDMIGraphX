@@ -8,6 +8,7 @@
 #include <migraphx/streamutils.hpp>
 #include <migraphx/literal.hpp>
 #include <migraphx/shape_for_each.hpp>
+#include <migraphx/to_shapes.hpp>
 #include <migraphx/config.hpp>
 #include <cmath>
 #include <utility>
@@ -28,17 +29,17 @@ struct concat
 
     std::string name() const { return "concat"; }
     std::vector<std::size_t> compute_offsets(const shape& output_shape,
-                                             const std::vector<argument>& args) const
+                                             const std::vector<shape>& inputs) const
     {
-        auto n_dims            = args[0].get_shape().lens().size();
+        auto n_dims            = inputs[0].lens().size();
         std::size_t axis_index = (axis < 0) ? axis + n_dims : axis;
         std::vector<std::size_t> offsets;
         std::vector<std::size_t> offset(n_dims, 0);
         offset[axis_index] = 0;
-        for(const auto& arg : args)
+        for(const auto& input : inputs)
         {
             offsets.push_back(output_shape.index(offset));
-            offset[axis_index] += arg.get_shape().lens()[axis_index];
+            offset[axis_index] += input.lens()[axis_index];
         }
         return offsets;
     }
@@ -78,7 +79,7 @@ struct concat
     argument compute(const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
-        std::vector<std::size_t> coffsets = compute_offsets(output_shape, args);
+        std::vector<std::size_t> coffsets = compute_offsets(output_shape, migraphx::to_shapes(args));
         for(std::size_t l = 0; l < args.size(); l++)
         {
             auto argl             = args[l];

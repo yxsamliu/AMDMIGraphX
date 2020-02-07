@@ -22,6 +22,7 @@ add_library(migraphx
     quantization.cpp
     shape.cpp
     schedule.cpp
+    to_shapes.cpp
     pass_manager.cpp
     simplify_algebra.cpp
     simplify_reshapes.cpp
