@@ -6,6 +6,7 @@ add_library(migraphx
     auto_contiguous.cpp
     eliminate_common_subexpression.cpp
     propagate_constant.cpp
+    propagate_copy.cpp
     dead_code_elimination.cpp
     eliminate_allocation.cpp
     eliminate_contiguous.cpp
