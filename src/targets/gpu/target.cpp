@@ -12,6 +12,7 @@
 #include <migraphx/simplify_reshapes.hpp>
 #include <migraphx/simplify_algebra.hpp>
 #include <migraphx/propagate_constant.hpp>
+#include <migraphx/propagate_copy.hpp>
 #include <migraphx/eliminate_contiguous.hpp>
 #include <migraphx/eliminate_common_subexpression.hpp>
 #include <migraphx/rewrite_batchnorm.hpp>
@@ -61,6 +62,8 @@ std::vector<pass> target::get_passes(migraphx::context& gctx, const compile_opti
         dead_code_elimination{},
         lowering{&ctx, options.offload_copy},
         eliminate_contiguous{},
+        dead_code_elimination{},
+        propagate_copy{"hip::copy"},
         dead_code_elimination{},
         adjust_allocation{},
         dead_code_elimination{},
