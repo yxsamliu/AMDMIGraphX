@@ -313,19 +313,20 @@ struct miopen_apply
     void add_concat_op()
     {
         apply_map.emplace("concat", [=](instruction_ref ins) {
-            auto&& op   = any_cast<op::concat>(ins->get_operator());
-            auto output = insert_allocation(ins, ins->get_shape());
+            auto&& op    = any_cast<op::concat>(ins->get_operator());
+            auto output  = insert_allocation(ins, ins->get_shape());
             auto offsets = op.compute_offsets(ins->get_shape(), to_shapes(ins->inputs()));
 
             std::vector<instruction_ref> args = {output};
             for(std::size_t i = 0; i < ins->inputs().size(); i++)
             {
-                auto input = ins->inputs()[i];
-                auto offset       = offsets[i];
-                auto byte_offset  = offset * input->get_shape().type_size();
-                auto s = shape{
-                    input->get_shape().type(), input->get_shape().lens(), output->get_shape().strides()};
-                auto load = prog->insert_instruction(ins, op::load{s, byte_offset}, output);
+                auto input       = ins->inputs()[i];
+                auto offset      = offsets[i];
+                auto byte_offset = offset * input->get_shape().type_size();
+                auto s           = shape{input->get_shape().type(),
+                               input->get_shape().lens(),
+                               output->get_shape().strides()};
+                auto load        = prog->insert_instruction(ins, op::load{s, byte_offset}, output);
                 args.emplace_back(prog->insert_instruction(ins, hip_copy{}, input, load));
             }
             return prog->replace_instruction(ins, op::identity{}, args);

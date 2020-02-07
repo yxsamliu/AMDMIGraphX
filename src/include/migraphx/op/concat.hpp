@@ -79,7 +79,8 @@ struct concat
     argument compute(const shape& output_shape, std::vector<argument> args) const
     {
         argument result{output_shape};
-        std::vector<std::size_t> coffsets = compute_offsets(output_shape, migraphx::to_shapes(args));
+        std::vector<std::size_t> coffsets =
+            compute_offsets(output_shape, migraphx::to_shapes(args));
         for(std::size_t l = 0; l < args.size(); l++)
         {
             auto argl             = args[l];
