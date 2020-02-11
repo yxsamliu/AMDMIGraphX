@@ -384,26 +384,25 @@ argument generic_eval(const program& p,
     values.reserve(16);
     for(auto ins : iterator_for(p))
     {
-        const auto& name = ins->name();
-        if(name == "@literal")
+        if(ins->name() == "@literal")
         {
             results.emplace(ins, trace(ins, [&] { return ins->get_literal().get_argument(); }));
         }
-        else if(name == "@param")
+        else if(ins->name() == "@param")
         {
             results.emplace(
                 ins, trace(ins, [&] {
                     auto param_name = any_cast<builtin::param>(ins->get_operator()).parameter;
                     if(not contains(params, param_name))
                         MIGRAPHX_THROW("Parameter not found: " + param_name);
-                    auto param = params[param_name];
+                    auto param = params.at(param_name);
                     if(param.get_shape() != ins->get_shape())
                         MIGRAPHX_THROW("Incorrect shape {" + to_string(param.get_shape()) +
                                        "} for parameter: " + param_name);
                     return param;
                 }));
         }
-        else if(name == "@outline")
+        else if(ins->name() == "@outline")
         {
             results.emplace(ins, trace(ins, [&] { return argument{ins->get_shape(), nullptr}; }));
         }

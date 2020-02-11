@@ -13,7 +13,6 @@ inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 
 MIGRAPHX_DECLARE_ENV_VAR(MIGRAPHX_ENABLE_NULL_STREAM)
-MIGRAPHX_DECLARE_ENV_VAR(MIGRAPHX_NSTREAMS)
 
 using hip_event_ptr = MIGRAPHX_MANAGE_PTR(hipEvent_t, hipEventDestroy);
 
@@ -131,7 +130,7 @@ struct hip_device
 
 struct context
 {
-    context(std::size_t device_id = 0, std::size_t n = value_of(MIGRAPHX_NSTREAMS{}, 1))
+    context(std::size_t device_id = 0, std::size_t n = 4)
         : current_device(std::make_shared<hip_device>(device_id, n))
     {
     }

@@ -21,11 +21,11 @@ bool disabled(const char* name)
     return contains({"0", "disable", "disabled", "no", "false"}, e.front());
 }
 
-std::size_t value_of(const char* name, std::size_t fallback)
+std::size_t value_of(const char* name)
 {
     auto e = env(name);
     if(e.empty())
-        return fallback;
+        return 0;
     return std::stoul(e.front());
 }
 
