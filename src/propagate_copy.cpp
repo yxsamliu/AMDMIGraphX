@@ -22,11 +22,11 @@ bool single_use(instruction_ref alias, instruction_ref ins)
             return false;
         return true;
     };
-    if (ins->name() == "identity")
+    if(ins->name() == "identity")
         return check_arg(ins->inputs().front());
     for(auto input : ins->inputs())
     {
-        if (not check_arg(input))
+        if(not check_arg(input))
             return false;
     }
     return true;
