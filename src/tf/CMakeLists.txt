@@ -18,7 +18,6 @@ target_include_directories(tf-proto SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR} ${
 target_compile_options(tf-proto PRIVATE -w)
 target_link_libraries(tf-proto PRIVATE ${PROTOBUF_LIBRARY})
 set_target_properties(tf-proto PROPERTIES POSITION_INDEPENDENT_CODE On)
-set_target_properties(tf-proto PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 add_library(migraphx_tf tf.cpp)
 set_target_properties(migraphx_tf PROPERTIES EXPORT_NAME tf)

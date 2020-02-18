@@ -6,7 +6,6 @@ target_include_directories(onnx-proto SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR} 
 target_compile_options(onnx-proto PRIVATE -w)
 target_link_libraries(onnx-proto PRIVATE ${PROTOBUF_LIBRARY})
 set_target_properties(onnx-proto PROPERTIES POSITION_INDEPENDENT_CODE On)
-set_target_properties(onnx-proto PROPERTIES CXX_VISIBILITY_PRESET hidden)
 
 add_library(migraphx_onnx onnx.cpp)
 set_target_properties(migraphx_onnx PROPERTIES EXPORT_NAME onnx)
