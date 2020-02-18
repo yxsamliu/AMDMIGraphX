@@ -8,12 +8,10 @@
 #include <basic_ops.hpp>
 #include <test.hpp>
 
-
 // y = f(x, mem);
 // z = copy(y, mem2);
 // =>
 // y = f(x, mem2);
-
 
 // y = f(x, mem);
 // y2 = g(y);
@@ -66,12 +64,18 @@ struct buffered
             return {s.type(), s.lens()};
         }
     }
-    std::ptrdiff_t output_alias(const std::vector<migraphx::shape>& shapes) const { return shapes.size() - 1; }
+    std::ptrdiff_t output_alias(const std::vector<migraphx::shape>& shapes) const
+    {
+        return shapes.size() - 1;
+    }
 };
 
 void run_pass(migraphx::program& p)
 {
-    migraphx::run_passes(p, {migraphx::propagate_copy{"copy"}, migraphx::dead_code_elimination{}, migraphx::eliminate_identity{}});
+    migraphx::run_passes(p,
+                         {migraphx::propagate_copy{"copy"},
+                          migraphx::dead_code_elimination{},
+                          migraphx::eliminate_identity{}});
 }
 
 TEST_CASE(simple)
@@ -79,10 +83,10 @@ TEST_CASE(simple)
     migraphx::program p1;
     {
         auto one = p1.add_literal(1);
-        auto m = p1.add_instruction(allocate{});
-        auto x = p1.add_instruction(buffered{}, one, m);
-        auto m2 = p1.add_instruction(allocate{});
-        auto y = p1.add_instruction(copy{}, x, m2);
+        auto m   = p1.add_instruction(allocate{});
+        auto x   = p1.add_instruction(buffered{}, one, m);
+        auto m2  = p1.add_instruction(allocate{});
+        auto y   = p1.add_instruction(copy{}, x, m2);
         p1.add_instruction(pass_op{}, y);
     }
     run_pass(p1);
@@ -90,8 +94,8 @@ TEST_CASE(simple)
     migraphx::program p2;
     {
         auto one = p2.add_literal(1);
-        auto m = p2.add_instruction(allocate{});
-        auto x = p2.add_instruction(buffered{}, one, m);
+        auto m   = p2.add_instruction(allocate{});
+        auto x   = p2.add_instruction(buffered{}, one, m);
         p2.add_instruction(pass_op{}, x);
     }
     EXPECT(p1 == p2);
@@ -102,11 +106,11 @@ TEST_CASE(as_shape_input)
     migraphx::program p1;
     {
         auto one = p1.add_literal(1);
-        auto m = p1.add_instruction(allocate{});
-        auto x = p1.add_instruction(buffered{}, one, m);
-        auto m2 = p1.add_instruction(allocate{});
-        auto g = p1.add_instruction(pass_op{}, x);
-        auto y = p1.add_instruction(copy{}, g, m2);
+        auto m   = p1.add_instruction(allocate{});
+        auto x   = p1.add_instruction(buffered{}, one, m);
+        auto m2  = p1.add_instruction(allocate{});
+        auto g   = p1.add_instruction(pass_op{}, x);
+        auto y   = p1.add_instruction(copy{}, g, m2);
         p1.add_instruction(pass_op{}, y);
     }
     run_pass(p1);
@@ -114,9 +118,9 @@ TEST_CASE(as_shape_input)
     migraphx::program p2;
     {
         auto one = p2.add_literal(1);
-        auto m = p2.add_instruction(allocate{});
-        auto x = p2.add_instruction(buffered{}, one, m);
-        auto g = p2.add_instruction(pass_op{}, x);
+        auto m   = p2.add_instruction(allocate{});
+        auto x   = p2.add_instruction(buffered{}, one, m);
+        auto g   = p2.add_instruction(pass_op{}, x);
         p2.add_instruction(pass_op{}, g);
     }
     EXPECT(p1 == p2);
