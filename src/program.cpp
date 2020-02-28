@@ -587,7 +587,8 @@ void program::perf_report(std::ostream& os, std::size_t n, parameter_map params)
         print_instruction(std::cout, ins, names);
 
         // skip return instruction
-        if (ins->name() == "@return") return;
+        if(ins->name() == "@return")
+            return;
 
         double avg     = common_average(ins_vec[ins]);
         double percent = std::ceil(100.0 * avg / total_instruction_time);
