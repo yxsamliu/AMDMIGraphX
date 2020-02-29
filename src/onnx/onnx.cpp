@@ -769,7 +769,7 @@ struct onnx_parser
             migraphx::argument axes_arg = axes_ins->eval();
             axes_arg.visit([&](auto s) { op.axes.assign(s.begin(), s.end()); });
         }
-        else if(info.contains(attributes, "axes"))
+        else if(contains(info.attributes, "axes"))
         {
             literal s = parse_value(info.attributes.at("axes"));
             s.visit([&](auto v) { copy(v, std::back_inserter(op.axes)); });
@@ -790,7 +790,7 @@ struct onnx_parser
             migraphx::argument end_arg = end_ins->eval();
             end_arg.visit([&](auto s) { op.ends.assign(s.begin(), s.end()); });
         }
-        else if(info.contains(attributes, "ends"))
+        else if(contains(info.attributes, "ends"))
         {
             op.ends = get_indices(info.attributes.at("ends"));
         }
@@ -805,7 +805,7 @@ struct onnx_parser
             migraphx::argument start_arg = start_ins->eval();
             start_arg.visit([&](auto s) { op.starts.assign(s.begin(), s.end()); });
         }
-        else if(info.contains(attributes, "starts"))
+        else if(contains(info.attributes, "starts"))
         {
             literal s = parse_value(info.attributes.at("starts"));
             s.visit([&](auto v) { copy(v, std::back_inserter(op.starts)); });
