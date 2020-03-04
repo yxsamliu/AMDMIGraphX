@@ -470,7 +470,8 @@ struct onnx_parser
             std::array<std::size_t, 2> k_lens;
             k_lens[0] = weight_lens[2];
             k_lens[1] = weight_lens[3];
-            auto pads = process_auto_pad_attribute(info.attributes, op, k_lens, op.dilation, in_lens);
+            auto pads =
+                process_auto_pad_attribute(info.attributes, op, k_lens, op.dilation, in_lens);
             if(!pads.empty())
             {
                 l0 = prog.add_instruction(op::pad{pads}, l0);
@@ -659,7 +660,8 @@ struct onnx_parser
             }
 
             auto in_lens = args[0]->get_shape().lens();
-            auto pads    = process_auto_pad_attribute(info.attributes, op, op.lengths, {1, 1}, in_lens);
+            auto pads =
+                process_auto_pad_attribute(info.attributes, op, op.lengths, {1, 1}, in_lens);
             if(!pads.empty())
             {
                 op::pad pad_op{pads};
