@@ -85,7 +85,7 @@ struct program
 
     instruction_ref add_outline(const shape& s);
 
-    instruction_ref add_parameter(std::string name, shape s);
+    instruction_ref add_parameter(std::string name, shape s, bool is_shape_dynamic = false);
 
     shape get_parameter_shape(std::string name) const;
 
@@ -132,6 +132,10 @@ struct program
 
     private:
     std::unique_ptr<program_impl> impl;
+    std::unique_ptr<program_impl> impl_orig;
+
+    bool m_is_input_shape_dynamic = false;
+    std::unordered_map<std::string, shape> m_input_shapes;
 };
 
 } // namespace MIGRAPHX_INLINE_NS

@@ -1,5 +1,5 @@
-#ifndef MIGRAPHX_GUARD_OPERATORS_GATHER_HPP
-#define MIGRAPHX_GUARD_OPERATORS_GATHER_HPP
+#ifndef MIGRAPHX_GUARD_OPERATORS_SHAPE_OF_HPP
+#define MIGRAPHX_GUARD_OPERATORS_SHAPE_OF_HPP
 
 #include <migraphx/operation.hpp>
 #include <migraphx/check_shapes.hpp>
