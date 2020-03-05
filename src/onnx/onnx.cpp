@@ -650,7 +650,8 @@ struct onnx_parser
                 val = std::numeric_limits<float>::lowest();
             }
 
-            l0 = process_auto_pad_attribute(l0, info.attributes, op, op.lengths, {1, 1}, in_lens, val);
+            l0 = process_auto_pad_attribute(
+                l0, info.attributes, op, op.lengths, {1, 1}, in_lens, val);
         }
 
         return prog.add_instruction(op, l0);
