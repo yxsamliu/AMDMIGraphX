@@ -12,6 +12,7 @@ endif()
 
 add_library(migraphx_device
     device/acos.cpp
+    device/acosh.cpp
     device/add.cpp
     device/add_clip.cpp
     device/add_relu.cpp
@@ -20,7 +21,9 @@ add_library(migraphx_device
     device/argmax.cpp
     device/argmin.cpp
     device/asin.cpp
+    device/asinh.cpp
     device/atan.cpp
+    device/atanh.cpp
     device/ceil.cpp
     device/clip.cpp
     device/concat.cpp
@@ -43,10 +46,12 @@ add_library(migraphx_device
     device/mul_add_relu.cpp
     device/pad.cpp
     device/pow.cpp
+    device/prelu.cpp
     device/reduce_max.cpp
     device/reduce_mean.cpp
     device/reduce_min.cpp
     device/reduce_sum.cpp
+    device/reduce_prod.cpp
     device/relu.cpp
     device/round.cpp
     device/rsqrt.cpp
@@ -63,7 +68,7 @@ add_library(migraphx_device
     device/erf_factor.cpp
 )
 set_target_properties(migraphx_device PROPERTIES EXPORT_NAME device)
-rocm_set_soversion(migraphx_device ${PROJECT_VERSION})
+rocm_set_soversion(migraphx_device ${MIGRAPHX_SO_VERSION})
 rocm_clang_tidy_check(migraphx_device)
 target_compile_options(migraphx_device PRIVATE -std=c++17)
 target_link_libraries(migraphx_device migraphx hip::device -Wno-invalid-command-line-argument -amdgpu-target=gfx803 -amdgpu-target=gfx900 -amdgpu-target=gfx906)
@@ -80,6 +85,7 @@ add_library(migraphx_gpu
     lowering.cpp
     pooling.cpp
     convolution.cpp
+    deconvolution.cpp
     quant_convolution.cpp
     softmax.cpp
     logsoftmax.cpp
@@ -102,9 +108,10 @@ add_library(migraphx_gpu
     int8_gemm_pack.cpp
     int8_conv_pack.cpp
     gemm_impl.cpp
+    preallocate_param.cpp
 )
 set_target_properties(migraphx_gpu PROPERTIES EXPORT_NAME gpu)
-rocm_set_soversion(migraphx_gpu ${PROJECT_VERSION})
+rocm_set_soversion(migraphx_gpu ${MIGRAPHX_SO_VERSION})
 rocm_clang_tidy_check(migraphx_gpu)
 target_link_libraries(migraphx_gpu PUBLIC migraphx MIOpen roc::rocblas)
 target_link_libraries(migraphx_gpu PRIVATE migraphx_device)

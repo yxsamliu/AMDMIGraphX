@@ -2,6 +2,7 @@
 #include "command.hpp"
 #include "verify.hpp"
 #include "perf.hpp"
+#include "models.hpp"
 
 #include <migraphx/tf.hpp>
 #include <migraphx/onnx.hpp>
@@ -26,17 +27,21 @@ inline namespace MIGRAPHX_INLINE_NS {
 
 struct loader
 {
+    std::string model;
     std::string file;
     std::string file_type;
-    bool is_nhwc  = true;
-    unsigned trim = 0;
-    bool optimize = false;
+    unsigned batch = 1;
+    bool is_nhwc   = true;
+    unsigned trim  = 0;
+    bool optimize  = false;
 
     void parse(argument_parser& ap)
     {
         ap(file, {}, ap.metavar("<input file>"));
+        ap(model, {"--model"}, ap.help("Load model"), ap.type("resnet50|inceptionv3|alexnet"));
         ap(file_type, {"--onnx"}, ap.help("Load as onnx"), ap.set_value("onnx"));
         ap(file_type, {"--tf"}, ap.help("Load as tensorflow"), ap.set_value("tf"));
+        ap(batch, {"--batch"}, ap.help("Set batch size for model"));
         ap(is_nhwc, {"--nhwc"}, ap.help("Treat tensorflow format as nhwc"), ap.set_value(true));
         ap(is_nhwc, {"--nchw"}, ap.help("Treat tensorflow format as nchw"), ap.set_value(false));
         ap(trim, {"--trim", "-t"}, ap.help("Trim instructions from the end"));
@@ -46,18 +51,32 @@ struct loader
     program load()
     {
         program p;
-        if(file_type.empty())
+        if(model.empty())
         {
-            if(ends_with(file, ".onnx"))
-                file_type = "onnx";
-            else if(ends_with(file, ".pb"))
-                file_type = "tf";
+            if(file_type.empty())
+            {
+                if(ends_with(file, ".onnx"))
+                    file_type = "onnx";
+                else if(ends_with(file, ".pb"))
+                    file_type = "tf";
+            }
+            std::cout << "Reading: " << file << std::endl;
+            if(file_type == "onnx")
+                p = parse_onnx(file, onnx_options{batch});
+            else if(file_type == "tf")
+                p = parse_tf(file, tf_options{is_nhwc, batch});
         }
-        std::cout << "Reading: " << file << std::endl;
-        if(file_type == "onnx")
-            p = parse_onnx(file);
-        else if(file_type == "tf")
-            p = parse_tf(file, is_nhwc);
+        else
+        {
+            if(model == "resnet50")
+                p = resnet50(batch);
+            else if(model == "inceptionv3")
+                p = inceptionv3(batch);
+            else if(model == "alexnet")
+                p = alexnet(batch);
+            else
+                MIGRAPHX_THROW("Unknown model: " + model);
+        }
         if(trim > 0)
         {
             auto last = std::prev(p.end(), trim);
@@ -87,8 +106,9 @@ struct compiler
     static const int q_fp16 = 1;
     static const int q_int8 = 2;
     loader l;
-    bool gpu     = true;
-    int quantize = 0;
+    bool gpu          = true;
+    bool offload_copy = false;
+    int quantize      = 0;
 
     std::vector<std::string> fill1;
     void parse(argument_parser& ap)
@@ -96,6 +116,10 @@ struct compiler
         l.parse(ap);
         ap(gpu, {"--gpu"}, ap.help("Compile on the gpu"), ap.set_value(true));
         ap(gpu, {"--cpu"}, ap.help("Compile on the cpu"), ap.set_value(false));
+        ap(offload_copy,
+           {"--enable-offload-copy"},
+           ap.help("Enable implicit offload copying"),
+           ap.set_value(false));
         ap(quantize, {"--fp16"}, ap.help("Quantize for fp16"), ap.set_value(q_fp16));
         ap(quantize, {"--int8"}, ap.help("Quantize for int8"), ap.set_value(q_int8));
         ap(fill1, {"--fill1"}, ap.help("Fill parameter with 1s"), ap.append());
@@ -103,10 +127,11 @@ struct compiler
 
     auto params(const program& p, bool use_gpu = true)
     {
+        bool gpu_flag = use_gpu && gpu && !offload_copy;
         program::parameter_map m;
         for(auto&& s : fill1)
             m[s] = fill_argument(p.get_parameter_shape(s), 1);
-        fill_param_map(m, p, use_gpu && gpu);
+        fill_param_map(m, p, gpu_flag);
         return m;
     }
 
@@ -122,7 +147,9 @@ struct compiler
         {
             quantize_int8(p, t, {params(p, false)});
         }
-        p.compile(t);
+        compile_options options;
+        options.offload_copy = offload_copy;
+        p.compile(t, options);
         return p;
     }
 };
@@ -130,6 +157,7 @@ struct compiler
 struct read : command<read>
 {
     loader l;
+    bool cpp      = false;
     bool graphviz = false;
     bool brief    = false;
     std::string output;
@@ -141,6 +169,7 @@ struct read : command<read>
            ap.help("Print out a graphviz representation."),
            ap.set_value(true));
         ap(brief, {"--brief"}, ap.help("Make the output brief."), ap.set_value(true));
+        ap(cpp, {"--cpp"}, ap.help("Print out the program as cpp program."), ap.set_value(true));
         ap(output, {"--output", "-o"}, ap.help("Output to file."));
     }
 
@@ -156,7 +185,9 @@ struct read : command<read>
             os = &fs;
         }
 
-        if(graphviz)
+        if(cpp)
+            p.print_cpp(*os);
+        else if(graphviz)
             p.print_graph(*os, brief);
         else
             *os << p << std::endl;
