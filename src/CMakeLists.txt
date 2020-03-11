@@ -45,6 +45,7 @@ target_include_directories(migraphx SYSTEM PUBLIC $<BUILD_INTERFACE:${HALF_INCLU
 set(PACKAGE_DEPENDS)
 
 add_subdirectory(api)
+add_subdirectory(cpugen)
 add_subdirectory(driver)
 add_subdirectory(onnx)
 add_subdirectory(tf)
