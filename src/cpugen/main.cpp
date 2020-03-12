@@ -93,7 +93,8 @@ void delim(std::ostream& os, std::string d, R&& r, F f)
     }
 }
 
-inline void replace_string(std::string& subject, const std::string& search, const std::string& replace)
+inline void
+replace_string(std::string& subject, const std::string& search, const std::string& replace)
 {
     size_t pos = 0;
     while((pos = subject.find(search, pos)) != std::string::npos)
@@ -103,7 +104,7 @@ inline void replace_string(std::string& subject, const std::string& search, cons
     }
 }
 
-template<class T>
+template <class T>
 inline void replace_string(std::string& subject, const std::string& search, T x)
 {
     replace_string(subject, search, std::to_string(x));
@@ -159,9 +160,8 @@ struct generator
     std::vector<migraphx::shape> to_shapes(std::vector<migraphx::instruction_ref> v)
     {
         std::vector<migraphx::shape> shapes;
-        std::transform(v.begin(), v.end(), std::back_inserter(shapes), [](auto i) {
-            return i->get_shape();
-        });
+        std::transform(
+            v.begin(), v.end(), std::back_inserter(shapes), [](auto i) { return i->get_shape(); });
         return shapes;
     }
 
@@ -191,7 +191,7 @@ struct generator
         return to_array_type(s.type_string(), s.elements());
     }
 
-    template<class T>
+    template <class T>
     static void replace_array(std::string& s, const std::string& search, std::vector<T> v)
     {
         std::vector<std::string> strings;
@@ -207,7 +207,8 @@ struct generator
         replace_array(s, search + ".strides", shp.strides());
     }
 
-    std::string create_dot(std::vector<migraphx::shape> inputs, migraphx::shape output, migraphx::op::dot op)
+    std::string
+    create_dot(std::vector<migraphx::shape> inputs, migraphx::shape output, migraphx::op::dot op)
     {
         std::string body = R"CODE(
             $result_type cmat;
@@ -215,10 +216,15 @@ struct generator
             return cmat;
         )CODE";
         replace_string(body, "$result_type", to_array_type(output));
-        return create_function({{"amat", to_array_type(inputs.at(0))}, {"bmat", to_array_type(inputs.at(1))}}, to_array_type(output), body);
+        return create_function(
+            {{"amat", to_array_type(inputs.at(0))}, {"bmat", to_array_type(inputs.at(1))}},
+            to_array_type(output),
+            body);
     }
 
-    std::string create_pooling(std::vector<migraphx::shape> inputs, migraphx::shape output, migraphx::op::pooling op)
+    std::string create_pooling(std::vector<migraphx::shape> inputs,
+                               migraphx::shape output,
+                               migraphx::op::pooling op)
     {
         std::string body = R"CODE(
             auto input_lens = $input.lens;
@@ -268,10 +274,12 @@ struct generator
         replace_string(body, "$lengths[0]", op.lengths[0]);
         replace_string(body, "$lengths[1]", op.lengths[1]);
         replace_string(body, "$result_type", to_array_type(output));
-        return create_function({{"input", to_array_type(inputs.at(0))}}, to_array_type(output), body);
-
+        return create_function(
+            {{"input", to_array_type(inputs.at(0))}}, to_array_type(output), body);
     }
-    std::string create_convolution(std::vector<migraphx::shape> inputs, migraphx::shape output, migraphx::op::convolution op)
+    std::string create_convolution(std::vector<migraphx::shape> inputs,
+                                   migraphx::shape output,
+                                   migraphx::op::convolution op)
     {
         std::string body = R"CODE(
             $result_type output;
@@ -322,8 +330,10 @@ struct generator
         replace_string(body, "$stride[1]", op.stride[1]);
         replace_string(body, "$group", op.group);
         replace_string(body, "$result_type", to_array_type(output));
-        return create_function({{"input", to_array_type(inputs.at(0))}, {"weights", to_array_type(inputs.at(1))}}, to_array_type(output), body);
-
+        return create_function(
+            {{"input", to_array_type(inputs.at(0))}, {"weights", to_array_type(inputs.at(1))}},
+            to_array_type(output),
+            body);
     }
 
     std::string
