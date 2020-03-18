@@ -274,7 +274,7 @@ instruction_ref program::add_outline(const shape& s)
 
 instruction_ref program::add_parameter(std::string name, shape s, bool is_shape_dynamic)
 {
-    m_is_input_shape_dynamic |= is_shape_dynamic;
+    m_input_shape_dynamic |= is_shape_dynamic;
     if (is_shape_dynamic)
     {
         m_input_shapes[name] = s;

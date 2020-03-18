@@ -134,9 +134,8 @@ struct program
 
     private:
     std::unique_ptr<program_impl> impl;
-    std::unique_ptr<program_impl> impl_orig;
 
-    bool m_is_input_shape_dynamic = false;
+    bool m_input_shape_dynamic = false;
     std::unordered_map<std::string, shape> m_input_shapes;
 };
 

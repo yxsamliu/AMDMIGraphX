@@ -669,15 +669,15 @@ struct onnx_parser
     parse_reshape(const std::string&, node_info info, std::vector<instruction_ref> args)
     {
         op::reshape op;
-        if(args.size() == 1)
-        {
-            literal s = parse_value(info.attributes.at("shape"));
-            s.visit([&](auto v) { copy(v, std::back_inserter(op.dims)); });
-        }
         if(args.size() == 2)
         {
             auto s = args[1]->eval();
             check_arg_empty(s, "Reshape: dynamic shape is not supported");
+            s.visit([&](auto v) { copy(v, std::back_inserter(op.dims)); });
+        }
+        else if(args.size() == 1)
+        {
+            literal s = parse_value(info.attributes.at("shape"));
             s.visit([&](auto v) { copy(v, std::back_inserter(op.dims)); });
         }
 
@@ -701,7 +701,7 @@ struct onnx_parser
         op::squeeze op;
         literal s = parse_value(info.attributes.at("axes"));
         s.visit([&](auto v) { copy(v, std::back_inserter(op.axes)); });
-        return prog.add_instruction(op, make_contiguous(args[0]));
+        return prog.add_instruction(op, make_contiguous(args[0]), args[1]);
     }
 
     instruction_ref
@@ -1792,8 +1792,9 @@ struct onnx_parser
             if(!contains(instructions, name))
             {
                 // TODO: Get shape of input parameter
-                shape s            = parse_type(input.type(), batch_size);
-                instructions[name] = prog.add_parameter(name, s);
+                bool dynamic_input_shape = false;
+                shape s            = parse_type(input.type(), batch_size, dynamic_input_shape);
+                instructions[name] = prog.add_parameter(name, s, dynamic_input_shape);
             }
         }
 
@@ -1995,7 +1996,7 @@ struct onnx_parser
         return literal{{shape_type, dims}, data.begin(), data.end()};
     }
 
-    static shape parse_type(const onnx::TypeProto& t, const unsigned int batch_size)
+    static shape parse_type(const onnx::TypeProto& t, const unsigned int batch_size, bool& dynamic_input_shape)
     {
         shape::type_t shape_type{};
         switch(t.tensor_type().elem_type())
@@ -2030,6 +2031,7 @@ struct onnx_parser
                                    return batch_size;
                                return d.dim_value();
                            }
+                           dynamic_input_shape = true;
                            return batch_size;
                        });
         if(dims.empty())
