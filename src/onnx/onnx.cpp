@@ -328,7 +328,7 @@ struct onnx_parser
     }
 
     instruction_ref
-    parse_clip(const std::string&, const node_info info, std::vector<instruction_ref> args)
+    parse_clip(const std::string&, node_info info, std::vector<instruction_ref> args)
     {
         op::clip op;
         if(contains(info.attributes, "max"))
@@ -1092,28 +1092,58 @@ struct onnx_parser
     instruction_ref parse_pad(const std::string&, node_info info, std::vector<instruction_ref> args)
     {
         std::vector<int64_t> pads{};
-        float value = 0.0f;
-        if(contains(info.attributes, "pads"))
+        if(args.size() >= 2)
+        {
+            auto pad_ins = args.at(1);
+            if(!pad_ins->can_eval())
+            {
+                MIGRAPHX_THROW("PARSE_PAD: pad input must be constant");
+            }
+            auto pad_arg = pad_ins->eval();
+            pad_arg.visit([&](auto v) { pads.assign(v.begin(), v.end()); });
+        }
+        else if(contains(info.attributes, "pads"))
         {
             auto&& pad_vals = info.attributes["pads"].ints();
             pads            = std::vector<int64_t>(pad_vals.begin(), pad_vals.end());
         }
+
         // check if padding is actually being done (at least one value is nonzero)
         if(std::all_of(pads.begin(), pads.end(), [](const int& i) { return i == 0; }))
         {
             return prog.add_instruction(migraphx::op::identity{}, args.front());
         }
-        if(contains(info.attributes, "value"))
+
+        float value = 0.0f;
+        // third input is the value
+        if(args.size() == 3)
+        {
+            auto val_ins = args.at(2);
+            if(!val_ins->can_eval())
+            {
+                MIGRAPHX_THROW("PARSE_PAD: input value must be constant");
+            }
+            auto val_arg = val_ins->eval();
+            if(val_arg.get_shape().elements() != 1)
+            {
+                MIGRAPHX_THROW("PARSE_PAD: value should contain only one element");
+            }
+            value = val_arg.at<float>();
+        }
+        else if(contains(info.attributes, "value"))
         {
             value = parse_value(info.attributes.at("value")).at<float>();
         }
+
         if(contains(info.attributes, "mode"))
         {
             auto mode = info.attributes.at("mode").s();
             if(mode != "constant")
-                MIGRAPHX_THROW("migraphx currently only supports constant padding");
+            {
+                MIGRAPHX_THROW("PARSE_PAD: migraphx currently only supports constant padding");
+            }
         }
-        return prog.add_instruction(migraphx::op::pad{pads, value}, args.front());
+        return prog.add_instruction(migraphx::op::pad{pads, value}, args);
     }
 
     instruction_ref
@@ -1121,7 +1151,7 @@ struct onnx_parser
     {
         if(args.size() != 1) 
         {
-            MIGRAPHX_THROW("Shape: operator should have 1 operand");
+            MIGRAPHX_THROW("PARSE_SHAPE: operator should have 1 operand");
         }
         
         return prog.add_instruction(op::shape_of{}, args);
@@ -1259,11 +1289,11 @@ struct onnx_parser
     {
         auto in_lens             = args[0]->get_shape().lens();
         migraphx::argument arg_s = args[1]->eval();
-        check_arg_empty(arg_s, "Expand: dynamic shape is not supported");
+        check_arg_empty(arg_s, "PARSE_EXPAND: dynamic shape is not supported");
         std::vector<std::size_t> dims;
         arg_s.visit([&](auto input) { dims.assign(input.begin(), input.end()); });
         auto out_lens = compute_broadcasted_lens(in_lens, dims);
-        return prog.add_instruction(op::multibroadcast{out_lens}, args[0]);
+        return prog.add_instruction(op::multibroadcast{out_lens}, args);
     }
 
     std::vector<instruction_ref>
@@ -1749,13 +1779,13 @@ struct onnx_parser
             axis = parse_value(info.attributes.at("axis")).at<int>();
         }
 
-        auto lens    = args[0]->get_shape().lens();
-        int64_t rank = static_cast<int64_t>(lens.size());
-        if((axis < -rank) or (axis >= rank))
+        auto lens      = args[0]->get_shape().lens();
+        int64_t n_rank = static_cast<int64_t>(lens.size());
+        if((axis < -n_rank) || (axis >= n_rank))
         {
             MIGRAPHX_THROW("PARSE_SPLIT: axis attribute out of rank!");
         }
-        int64_t tuned_axis = (axis < 0) ? axis + rank : axis;
+        int64_t tuned_axis = (axis < 0) ? axis + n_rank : axis;
 
         std::vector<int64_t> vec_splits;
         if(contains(info.attributes, "split"))
