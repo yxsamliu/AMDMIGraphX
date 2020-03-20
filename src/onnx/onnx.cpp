@@ -681,7 +681,9 @@ struct onnx_parser
             s.visit([&](auto v) { copy(v, std::back_inserter(op.dims)); });
         }
 
-        return prog.add_instruction(op, make_contiguous(args[0]));
+        args[0] = make_contiguous(args[0]);
+
+        return prog.add_instruction(op, args);
     }
 
     instruction_ref
