@@ -305,14 +305,15 @@ struct onnx_parser
 
     template <class Op>
     void check_asym_padding(instruction_ref& ins,
-                            std::vector<int64_t>& padding,
+                            const std::vector<int64_t>& padding,
                             Op& op,
                             float pad_val = 0)
     {
         if(padding[0] != padding[2] || padding[1] != padding[3])
         {
-            padding = {0, 0, padding[0], padding[1], 0, 0, padding[2], padding[3]};
-            ins     = prog.add_instruction(op::pad{padding, pad_val}, ins);
+            ins = prog.add_instruction(
+                op::pad{{0, 0, padding[0], padding[1], 0, 0, padding[2], padding[3]}, pad_val},
+                ins);
         }
         else
         {
@@ -416,6 +417,7 @@ struct onnx_parser
         Op op;
         auto l0      = args[0];
         auto weights = args[1];
+        std::vector<int64_t> padding;
         if(contains(attributes, "pads"))
         {
             if(contains(attributes, "auto_pad"))
@@ -427,7 +429,6 @@ struct onnx_parser
                         "PARSE_CONV: auto_pad and padding cannot be specified simultaneously");
                 }
             }
-            std::vector<std::int64_t> padding;
             copy(attributes["pads"].ints(), std::back_inserter(padding));
             if(padding.size() != 4)
             {
@@ -454,7 +455,7 @@ struct onnx_parser
                 size_t weight_w                 = weight_dims[3];
 
                 auto input_dims = l0->get_shape().lens();
-                std::vector<int64_t> padding(input_dims.size());
+                padding.resize(input_dims.size());
                 calculate_padding(
                     0, padding, input_dims[2], op.stride[0], op.dilation[0], weight_h);
                 calculate_padding(
