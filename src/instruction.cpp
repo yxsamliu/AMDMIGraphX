@@ -178,7 +178,7 @@ void instruction::replace_argument(instruction_ref old, instruction_ref new_ins)
 
 bool instruction::can_eval() const
 {
-    if(op.name() == "@literal")
+    if(op.name() == "@literal" or op.name() == "shape")
     {
         return true;
     }
@@ -199,6 +199,19 @@ argument instruction::eval(bool check_eval) const
     {
         return this->get_literal().get_argument();
     }
+    else if (op.name() == "shape")
+    {
+        auto arg_s = this->inputs().front()->get_shape();
+        auto lens = arg_s.lens();
+        shape out_s{shape::int64_type, {lens.size()}};
+        argument arg_ret{out_s};
+        arg_ret.visit([&](auto out) {
+            std::copy(lens.begin(), lens.end(), out.begin());
+        });
+
+        return arg_ret;
+    }
+    
     if(is_context_free(op))
     {
         if(check_eval and not this->can_eval())

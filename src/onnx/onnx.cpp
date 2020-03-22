@@ -703,7 +703,7 @@ struct onnx_parser
         op::squeeze op;
         literal s = parse_value(info.attributes.at("axes"));
         s.visit([&](auto v) { copy(v, std::back_inserter(op.axes)); });
-        return prog.add_instruction(op, make_contiguous(args[0]), args[1]);
+        return prog.add_instruction(op, args[0]);
     }
 
     instruction_ref
@@ -746,8 +746,6 @@ struct onnx_parser
     parse_slice(const std::string&, node_info info, std::vector<instruction_ref> args)
     {
         op::slice op;
-        std::vector<size_t> dims = args[0]->get_shape().lens();
-        size_t num_dims          = dims.size();
 
         // slice can have up to 5 inputs, we first check the 5th one
         // to decide whether MIGRAPHX can handle this slice

@@ -25,7 +25,7 @@ struct shape_of
     argument compute(const shape& output_shape, std::vector<argument> args) const
     {
         auto lens = args[0].get_shape().lens();
-        argument result;
+        argument result{output_shape};
         result.visit([&](auto output) {
             std::copy(lens.begin(), lens.end(), output.begin());
         });
