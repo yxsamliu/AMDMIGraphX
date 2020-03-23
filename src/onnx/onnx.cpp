@@ -420,7 +420,7 @@ struct onnx_parser
         Op op;
         auto l0      = args[0];
         auto weights = args[1];
-        std::vector<int64_t> padding;
+        std::vector<int64_t> padding(l0->get_shape().lens().size());
         if(contains(attributes, "pads"))
         {
             if(contains(attributes, "auto_pad"))
@@ -432,7 +432,7 @@ struct onnx_parser
                         "PARSE_CONV: auto_pad and padding cannot be specified simultaneously");
                 }
             }
-            copy(attributes["pads"].ints(), std::back_inserter(padding));
+            copy(attributes["pads"].ints(), padding.begin());
             if(padding.size() != 4)
             {
                 MIGRAPHX_THROW("PARSE_CONV: padding should have 4 values");
@@ -472,7 +472,6 @@ struct onnx_parser
             std::array<std::size_t, 2> k_lens;
             k_lens[0] = weight_lens[2];
             k_lens[1] = weight_lens[3];
-            std::vector<int64_t> padding(in_lens.size());
             l0 = process_auto_pad_attribute(l0, attributes, op, k_lens, op.dilation, in_lens, 0, padding);
         }
 
@@ -611,7 +610,7 @@ struct onnx_parser
         {
             return (p2.second - p1.second) * (p2.first - p3.first);
         }
-        else if (p1.frist < p3.first and p2.second > p4.second)
+        else if (p1.first < p3.first and p2.second > p4.second)
         {
             return (p2.first - p3.first) * (p4.second - p1.second);
         }
@@ -641,9 +640,9 @@ struct onnx_parser
         }   
     }
 
-    std::vector<float> tune_averagepool_output(std::array<std::size_t, 2> kernel_lens, std::array<std::size_t, 2> strides, std::vector<int64_t> padding, shape out_s)
+    std::vector<float> tune_averagepool_output(std::array<std::size_t, 2> kernel_lens, std::array<std::size_t, 2> strides, std::vector<int64_t> padding, shape in_s, shape out_s)
     {
-        std::vector<float> vec_factor(s.elements(), 1.0f);
+        std::vector<float> vec_factor(out_s.elements(), 1.0f);
         auto in_lens = in_s.lens();
         point p3 = {padding[0], padding[1]};
         point p4 = {padding[0] + in_lens[2], padding[1] + in_lens[3]};
@@ -740,7 +739,7 @@ struct onnx_parser
         if ((count_include_pad == 0) and (padding[0] != padding[2] or padding[1] != padding[3]))
         {
             auto factor_s = l0->get_shape();
-            auto vec_factor = tune_averagepool_output(op.lengths, op.strides, padding, l0->get_shape());
+            auto vec_factor = tune_averagepool_output(op.lengths, op.stride, padding, args[0]->get_shape(), l0->get_shape());
             auto l_factor = prog.add_literal(literal(factor_s, vec_factor.begin(), vec_factor.end()));
             l0 = prog.add_instruction(op::mul{}, l0, l_factor);
         }
