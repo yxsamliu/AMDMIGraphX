@@ -17,6 +17,7 @@
 #include <migraphx/config.hpp>
 #include <migraphx/onnx.hpp>
 #include <migraphx/pad_calc.hpp>
+#include <migraphx/shape_for_each.hpp>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -307,10 +308,11 @@ struct onnx_parser
     void check_asym_padding(instruction_ref& ins,
                             const std::vector<int64_t>& padding,
                             Op& op,
+                            int count_include_pad = 0,
                             float pad_val = 0)
     {
-        if(padding[0] != padding[2] || padding[1] != padding[3])
-        {
+        if((padding[0] != padding[2] or padding[1] != padding[3]) or (count_include_pad == 1))
+        {   
             ins = prog.add_instruction(
                 op::pad{{0, 0, padding[0], padding[1], 0, 0, padding[2], padding[3]}, pad_val},
                 ins);
@@ -387,6 +389,8 @@ struct onnx_parser
                                                std::array<std::size_t, 2> k_lens,
                                                std::array<std::size_t, 2> dilation,
                                                const std::vector<std::size_t>& in_lens,
+                                               int count_include_pad,
+                                               std::vector<int64_t>& padding,
                                                float value = 0.0f)
     {
         if(!contains(attributes, "auto_pad"))
@@ -398,13 +402,12 @@ struct onnx_parser
         if(auto_pad.find("SAME") != std::string::npos)
         {
             bool is_same_upper = (auto_pad.find("SAME_UPPER") != std::string::npos);
-            std::vector<int64_t> padding(in_lens.size());
             calculate_padding(
                 0, padding, in_lens[2], op.stride[0], dilation[0], k_lens[0], is_same_upper);
             calculate_padding(
                 1, padding, in_lens[3], op.stride[1], dilation[1], k_lens[1], is_same_upper);
 
-            check_asym_padding(ins, padding, op, value);
+            check_asym_padding(ins, padding, op, count_include_pad, value);                
         }
 
         return ins;
@@ -469,7 +472,8 @@ struct onnx_parser
             std::array<std::size_t, 2> k_lens;
             k_lens[0] = weight_lens[2];
             k_lens[1] = weight_lens[3];
-            l0 = process_auto_pad_attribute(l0, attributes, op, k_lens, op.dilation, in_lens);
+            std::vector<int64_t> padding(in_lens.size());
+            l0 = process_auto_pad_attribute(l0, attributes, op, k_lens, op.dilation, in_lens, 0, padding);
         }
 
         if(contains(attributes, "group"))
@@ -586,6 +590,76 @@ struct onnx_parser
         return add_bias(args, l1, 1);
     }
 
+    using point = std::pair<std::size_t, std::size_t>;
+    // assumption (p4.first - p3.first) > (p2.first - p1.first)
+    // and (p4.second - p3.second) > (p2.second - p1.second)
+    std::size_t pool_size(point p1, point p2, point p3, point p4)
+    {
+        if (p2.first <= p3.first or p2.second <= p3.second)
+        {
+            return 0;
+        }
+        else if (p1.first >= p4.first or p1.second >= p4.second)
+        {
+            return 0;
+        }
+        else if (p1.first < p3.first and p1.second < p3.second)
+        {
+            return (p2.second - p3.second) * (p2.first - p3.first);
+        }
+        else if (p1.first < p3.first and p1.second >= p3.second)
+        {
+            return (p2.second - p1.second) * (p2.first - p3.first);
+        }
+        else if (p1.frist < p3.first and p2.second > p4.second)
+        {
+            return (p2.first - p3.first) * (p4.second - p1.second);
+        }
+        else if (p1.first >= p3.first and p2.second > p4.second)
+        {
+            return (p2.first - p1.first) * (p4.second - p1.second);
+        }
+        else if (p2.first > p4.first and p2.second > p4.second)
+        {
+            return (p4.first - p1.first) * (p4.second - p1.second);
+        }
+        else if (p2.first > p4.first and p2.second <= p4.second)
+        {
+            return (p2.second - p1.second) * (p4.first - p1.first);
+        }
+        else if (p2.first > p4.first and p1.second < p3.second)
+        {
+            return (p4.first - p1.first) * (p2.second - p3.second);
+        }
+        else if (p2.first <= p4.first and p1.second < p3.second)
+        {
+            return (p2.first - p1.first) * (p2.second - p3.second);
+        }
+        else // inside
+        {
+            return (p2.first - p1.first) * (p2.second - p1.second);
+        }   
+    }
+
+    std::vector<float> tune_averagepool_output(std::array<std::size_t, 2> kernel_lens, std::array<std::size_t, 2> strides, std::vector<int64_t> padding, shape out_s)
+    {
+        std::vector<float> vec_factor(s.elements(), 1.0f);
+        auto in_lens = in_s.lens();
+        point p3 = {padding[0], padding[1]};
+        point p4 = {padding[0] + in_lens[2], padding[1] + in_lens[3]};
+
+        auto size = kernel_lens[0] * kernel_lens[1];
+
+        shape_for_each(out_s, [&](const auto& idx) {
+            point p1 = {idx[2] * strides[0], idx[3] * strides[1]};
+            point p2 = {p1.first + kernel_lens[0], p1.second + kernel_lens[1]};
+            auto count = this->pool_size(p1, p2, p3, p4);
+            vec_factor[out_s.index(idx)] = 1.0f * size / count;
+        });
+
+        return vec_factor;
+    }
+
     instruction_ref parse_pooling(const std::string& name,
                                   attribute_map attributes,
                                   std::vector<instruction_ref> args)
@@ -598,6 +672,20 @@ struct onnx_parser
             op.lengths = {lens[2], lens[3]};
         }
 
+        float pad_val = 0;
+        if(op.mode == "max")
+        {
+            pad_val = std::numeric_limits<float>::lowest();
+        }
+
+        // average pooling attribute
+        int count_include_pad = 0;
+        if (contains(attributes, "count_include_pad"))
+        {
+            count_include_pad = parse_value(attributes.at("count_include_pad")).at<int>();
+        }
+
+        std::vector<std::int64_t> padding(l0->get_shape().lens().size());
         if(contains(attributes, "pads"))
         {
             if(contains(attributes, "auto_pad"))
@@ -610,16 +698,13 @@ struct onnx_parser
                 }
             }
 
-            std::vector<std::int64_t> padding;
-            copy(attributes["pads"].ints(), std::back_inserter(padding));
+            copy(attributes["pads"].ints(), padding.begin());
             if(padding.size() != 4)
             {
                 MIGRAPHX_THROW("PARSE_POOLING: padding should have 4 values");
             }
-            float pad_val = 0;
-            if(op.mode == "max")
-                pad_val = std::numeric_limits<float>::lowest();
-            check_asym_padding(l0, padding, op, pad_val);
+
+            check_asym_padding(l0, padding, op, count_include_pad, pad_val);                
         }
 
         if(contains(attributes, "strides"))
@@ -640,17 +725,27 @@ struct onnx_parser
             }
 
             auto in_lens = args[0]->get_shape().lens();
-            float val    = 0.0f;
-            // MaxPool
-            if(op.mode == "max")
-            {
-                val = std::numeric_limits<float>::lowest();
-            }
-
-            l0 = process_auto_pad_attribute(l0, attributes, op, op.lengths, {1, 1}, in_lens, val);
+            l0 = process_auto_pad_attribute(l0, attributes, op, op.lengths, {1, 1}, in_lens, count_include_pad, padding, pad_val);
         }
 
-        return prog.add_instruction(op, l0);
+        // compute polling output
+        l0 = prog.add_instruction(op, l0);
+        if (name = "AveragePool")
+        {
+            return l0;
+        }
+
+        // Need additional processing for aync padding in AveragePool with count_include_pad = 0
+        // since explicit padding generates results of count_include_pad = 1
+        if ((count_include_pad == 0) and (padding[0] != padding[2] or padding[1] != padding[3]))
+        {
+            auto factor_s = l0->get_shape();
+            auto vec_factor = tune_averagepool_output(op.lengths, op.strides, padding, l0->get_shape());
+            auto l_factor = prog.add_literal(literal(factor_s, vec_factor.begin(), vec_factor.end()));
+            l0 = prog.add_instruction(op::mul{}, l0, l_factor);
+        }
+
+        return l0;
     }
 
     instruction_ref
