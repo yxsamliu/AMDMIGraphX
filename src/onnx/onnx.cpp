@@ -730,7 +730,7 @@ struct onnx_parser
 
         // compute polling output
         l0 = prog.add_instruction(op, l0);
-        if (name = "AveragePool")
+        if (name != "AveragePool")
         {
             return l0;
         }
