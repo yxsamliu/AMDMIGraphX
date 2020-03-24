@@ -21,6 +21,7 @@
 #include <migraphx/op/clip.hpp>
 #include <migraphx/op/common.hpp>
 #include <migraphx/op/concat.hpp>
+#include <migraphx/op/const_of_shape.hpp>
 #include <migraphx/op/contiguous.hpp>
 #include <migraphx/op/convert.hpp>
 #include <migraphx/op/convolution.hpp>

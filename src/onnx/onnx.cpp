@@ -1149,7 +1149,7 @@ struct onnx_parser
     instruction_ref
     parse_shape(const std::string&, const node_info&, std::vector<instruction_ref> args)
     {
-        if(args.size() != 1) 
+        if(args.size() != 1)
         {
             MIGRAPHX_THROW("PARSE_SHAPE: operator should have 1 operand");
         }
@@ -1239,7 +1239,7 @@ struct onnx_parser
             l_val = parse_value(info.attributes.at("value"));
             if(l_val.get_shape().elements() != 1)
             {
-                MIGRAPHX_THROW("ConstantOfShape: attribute value can contain only 1 elements!");
+                MIGRAPHX_THROW("PARSE_CONSTANT_OF_SHAPE: attribute value can contain only 1 elements!");
             }
         }
         else
@@ -1247,41 +1247,38 @@ struct onnx_parser
             l_val = literal({shape::float_type, {1}, {0}}, {0.0f});
         }
 
-        // input is empty, output is a scalar
-        auto type = l_val.get_shape().type();
+        // add a literal to store the type and value
+        val_arg = prog.add_literal(l_val);
+        return prog.add_instruction(op::const_of_shape{}, val_arg, args[0]);
 
-        if(args.empty())
-        {
-            MIGRAPHX_THROW("ConstantOfShape : must have 1 input!");
-        }
-        else
-        {
-            migraphx::shape s;
-            // empty input tensor, output is a scalar
-            if(args[0]->get_shape().elements() == 0)
-            {
-                s = migraphx::shape{type, {1}, {0}};
-            }
-            else
-            {
-                migraphx::argument in = args[0]->eval();
-                check_arg_empty(in, "ConstantOfShape: dynamic shape is not supported");
+        // // input is empty, output is a scalar
+        // auto type = l_val.get_shape().type();
 
-                std::vector<std::size_t> dims;
-                in.visit([&](auto input) { dims.assign(input.begin(), input.end()); });
-                s = migraphx::shape{type, dims};
-            }
+        // migraphx::shape s;
+        // // empty input tensor, output is a scalar
+        // if(args[0]->get_shape().elements() == 0)
+        // {
+        //     s = migraphx::shape{type};
+        // }
+        // else
+        // {
+        //     migraphx::argument in = args[0]->eval();
+        //     check_arg_empty(in, "ConstantOfShape: dynamic shape is not supported");
 
-            literal l_out{};
-            l_val.visit([&](auto val) {
-                using val_type = std::remove_cv_t<typename decltype(val)::value_type>;
-                // l_val contains only one element
-                std::vector<val_type> out_vec(s.elements(), val.front());
-                l_out = literal(s, out_vec);
-            });
+        //     std::vector<std::size_t> dims;
+        //     in.visit([&](auto input) { dims.assign(input.begin(), input.end()); });
+        //     s = migraphx::shape{type, dims};
+        // }
 
-            return prog.add_literal(l_out);
-        }
+        // literal l_out{};
+        // l_val.visit([&](auto val) {
+        //     using val_type = std::remove_cv_t<typename decltype(val)::value_type>;
+        //     // l_val contains only one element
+        //     std::vector<val_type> out_vec(s.elements(), val.front());
+        //     l_out = literal(s, out_vec);
+        // });
+
+        // return prog.add_literal(l_out);
     }
 
     instruction_ref
