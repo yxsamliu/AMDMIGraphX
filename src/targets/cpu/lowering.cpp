@@ -461,7 +461,7 @@ struct cpu_pad
         argument result{output_shape};
         // value is from the second argument
         float val = args[1].at<float>();
-        
+
         result.visit([&](auto output) { std::fill(output.begin(), output.end(), op.value); });
 
         visit_all(result, args[0])([&](auto output, auto input) {
