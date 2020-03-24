@@ -1062,6 +1062,10 @@ struct onnx_parser
             auto&& pad_vals = info.attributes["pads"].ints();
             pads            = std::vector<int64_t>(pad_vals.begin(), pad_vals.end());
         }
+        else
+        {
+            MIGRAPHX_THROW("PARSE_PAD: pad info is unavailable");
+        }
 
         // check if padding is actually being done (at least one value is nonzero)
         if(std::all_of(pads.begin(), pads.end(), [](const int& i) { return i == 0; }))
@@ -1069,25 +1073,21 @@ struct onnx_parser
             return prog.add_instruction(migraphx::op::identity{}, args.front());
         }
 
-        float value = 0.0f;
         // third input is the value
-        if(args.size() == 3)
+        instruction_ref val_arg{};
+        if(args.size() == 3 and (!args[2]->get_shape().scalar()))
         {
-            auto val_ins = args.at(2);
-            if(!val_ins->can_eval())
-            {
-                MIGRAPHX_THROW("PARSE_PAD: input value must be constant");
-            }
-            auto val_arg = val_ins->eval();
-            if(val_arg.get_shape().elements() != 1)
-            {
-                MIGRAPHX_THROW("PARSE_PAD: value should contain only one element");
-            }
-            value = val_arg.at<float>();
+            MIGRAPHX_THROW("PARSE_PAD: value should be a scalar!");
+            val_arg = args[2];
         }
-        else if(contains(info.attributes, "value"))
+        else
         {
-            value = parse_value(info.attributes.at("value")).at<float>();
+            float value = 0.0f;
+            if(contains(info.attributes, "value"))
+            {
+                value = parse_value(info.attributes.at("value")).at<float>();
+            }
+            val_arg = prog.add_literal(literal({shape::float_type}, {value}));
         }
 
         if(contains(info.attributes, "mode"))
@@ -1098,7 +1098,7 @@ struct onnx_parser
                 MIGRAPHX_THROW("PARSE_PAD: migraphx currently only supports constant padding");
             }
         }
-        return prog.add_instruction(migraphx::op::pad{pads, value}, args.front());
+        return prog.add_instruction(migraphx::op::pad{pads}, args.front(), val_arg);
     }
     // Use a literal instruction to replace the shape since, output of
     // shape operator are literals in migraphx

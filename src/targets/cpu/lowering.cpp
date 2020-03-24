@@ -453,12 +453,15 @@ struct cpu_pad
         return migraphx::reflect(self.op, f);
     }
 
-    std::string name() const { return "cpu::contiguous"; }
+    std::string name() const { return "cpu::pad"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         assert(output_shape.standard());
         argument result{output_shape};
+        // value is from the second argument
+        float val = args[1].at<float>();
+        
         result.visit([&](auto output) { std::fill(output.begin(), output.end(), op.value); });
 
         visit_all(result, args[0])([&](auto output, auto input) {
