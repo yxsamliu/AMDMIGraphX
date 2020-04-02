@@ -34,8 +34,8 @@ struct onnx_parser
         std::function<std::vector<instruction_ref>(node_info, std::vector<instruction_ref>)>;
     node_map nodes;
     std::unordered_map<std::string, instruction_ref> instructions;
-    program prog            = program();
-    bool is_pytorch         = false;
+    program prog                  = program();
+    bool is_pytorch               = false;
     std::size_t default_dim_value = 1;
     std::unordered_map<std::string, std::size_t> map_dim_param_values;
 
@@ -1888,7 +1888,7 @@ struct onnx_parser
             if(!contains(instructions, name))
             {
                 // TODO: Get shape of input parameter
-                shape s            = parse_type(input.type(), map_dim_param_values, default_dim_value);
+                shape s = parse_type(input.type(), map_dim_param_values, default_dim_value);
                 instructions[name] = prog.add_parameter(name, s);
             }
         }
@@ -2179,7 +2179,7 @@ struct onnx_parser
                            {
                                auto param_name = d.dim_param();
                                std::cout << "dim_param = " << d.dim_param() << std::endl;
-                               if (dim_param_values.count(param_name) > 0)
+                               if(dim_param_values.count(param_name) > 0)
                                {
                                    return dim_param_values[param_name];
                                }
@@ -2229,7 +2229,7 @@ program parse_onnx_from(const onnx_options& options, Ts&&... xs)
 {
     onnx_parser parser;
     parser.map_dim_param_values = options.map_dim_param_values;
-    parser.default_dim_value     = options.default_dim_value;
+    parser.default_dim_value    = options.default_dim_value;
 
 #ifndef NDEBUG
     // Log the program when it can't be parsed

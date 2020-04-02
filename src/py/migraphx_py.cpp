@@ -193,7 +193,7 @@ PYBIND11_MODULE(migraphx, m)
           "Parse onnx file",
           py::arg("filename"),
           py::arg("map_dim_param_values") = std::map<std::string, std::size_t>(),
-          py::arg("default_dim_value")     = 1);
+          py::arg("default_dim_value")    = 1);
 
     m.def("get_target", [](const std::string& name) -> migraphx::target {
         if(name == "cpu")

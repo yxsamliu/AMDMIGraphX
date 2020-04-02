@@ -820,7 +820,7 @@ TEST_CASE(implicit_add_bcast_var_default_test)
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {2, 1, 4, 5}});
     auto l1 = p.add_parameter("1", migraphx::shape{migraphx::shape::float_type, {1, 4, 1}});
     auto l3 = p.add_instruction(migraphx::op::multibroadcast{{2, 1, 4, 5}}, l1);
-    auto r = p.add_instruction(migraphx::op::add{}, l0, l3);
+    auto r  = p.add_instruction(migraphx::op::add{}, l0, l3);
     p.add_return({r});
 
     auto prog = migraphx::parse_onnx("implicit_add_bcast_var_len_test.onnx");
@@ -834,7 +834,7 @@ TEST_CASE(implicit_add_bcast_var_len3_test)
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {2, 3, 4, 5}});
     auto l1 = p.add_parameter("1", migraphx::shape{migraphx::shape::float_type, {3, 4, 1}});
     auto l3 = p.add_instruction(migraphx::op::multibroadcast{{2, 3, 4, 5}}, l1);
-    auto r = p.add_instruction(migraphx::op::add{}, l0, l3);
+    auto r  = p.add_instruction(migraphx::op::add{}, l0, l3);
     p.add_return({r});
 
     migraphx::onnx_options options;
@@ -850,7 +850,7 @@ TEST_CASE(implicit_add_bcast_var_len2_test)
     auto l0 = p.add_parameter("0", migraphx::shape{migraphx::shape::float_type, {2, 2, 4, 5}});
     auto l1 = p.add_parameter("1", migraphx::shape{migraphx::shape::float_type, {2, 4, 1}});
     auto l3 = p.add_instruction(migraphx::op::multibroadcast{{2, 2, 4, 5}}, l1);
-    auto r = p.add_instruction(migraphx::op::add{}, l0, l3);
+    auto r  = p.add_instruction(migraphx::op::add{}, l0, l3);
     p.add_return({r});
 
     migraphx::onnx_options options;

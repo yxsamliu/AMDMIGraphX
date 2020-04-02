@@ -492,10 +492,7 @@ struct onnx_options : MIGRAPHX_HANDLE_BASE(onnx_options)
 
     void add_dim_param_value(const std::string& name, std::size_t value)
     {
-        call(&migraphx_onnx_options_add_dim_value,
-             this->get_handle_ptr(),
-             name.c_str(),
-             value);
+        call(&migraphx_onnx_options_add_dim_value, this->get_handle_ptr(), name.c_str(), value);
     }
 
     void set_default_dim_value(size_t value)

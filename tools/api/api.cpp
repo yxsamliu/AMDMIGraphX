@@ -92,9 +92,7 @@ void set_default_dim_value(onnx_options& options, size_t value)
     options.default_dim_value = value;
 }
 
-void add_dim_value(onnx_options& options,
-                   const char* name,
-                   std::size_t dim_value)
+void add_dim_value(onnx_options& options, const char* name, std::size_t dim_value)
 {
     options.map_dim_param_values[std::string(name)] = dim_value;
 }
