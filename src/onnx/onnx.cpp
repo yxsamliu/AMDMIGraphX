@@ -111,6 +111,7 @@ struct onnx_parser
         add_mem_op("MatMul", &onnx_parser::parse_matmul<op::dot>);
         add_mem_op("MatMulInteger", &onnx_parser::parse_matmul<op::quant_dot>);
         add_mem_op("MaxPool", &onnx_parser::parse_pooling);
+        add_mem_op("OneHot", &onnx_parser::parse_onehot);
         add_mem_op("ReduceL1", &onnx_parser::parse_reduce_l1);
         add_mem_op("ReduceL2", &onnx_parser::parse_reduce_l2);
         add_mem_op("ReduceLogSum", &onnx_parser::parse_reduce_log_sum);
@@ -813,7 +814,13 @@ struct onnx_parser
             literal s = parse_value(info.attributes.at("starts"));
             s.visit([&](auto v) { copy(v, std::back_inserter(op.starts)); });
         }
-
+        auto lens = args[0]->get_shape().lens();
+        if(op.axes.empty())
+        {
+            std::vector<int64_t> axes(lens.size());
+            std::iota(axes.begin(), axes.end(), int64_t{0});
+            op.axes = axes;
+        }
         return prog.add_instruction(op, args[0]);
     }
 
@@ -1798,6 +1805,36 @@ struct onnx_parser
         }
 
         return ret_ins;
+    }
+
+    instruction_ref
+    parse_onehot(const std::string&, node_info info, std::vector<instruction_ref> args)
+    {
+        size_t depth = static_cast<size_t>(args[1]->eval().at<int32_t>());
+
+        int64_t axis    = -1;
+        std::vector<float>on_off_vals;
+
+        migraphx::argument on_off_arg  = args[2]->eval();
+        on_off_arg.visit([&](auto v) { copy(v, std::back_inserter(on_off_vals)); });
+        float on_value = on_off_vals[0];
+        float off_value = on_off_vals[1];
+
+        std::vector<float> depth_input(depth * depth, off_value);
+        for(int i = 0; i < depth; i++)
+        {
+            depth_input[depth * i + i] = on_value;
+        }
+
+        if(contains(info.attributes, "axis"))
+            axis = info.attributes.at("axis").i();
+        if(axis == -1)
+        {
+            shape s{shape::float_type, {depth, depth}};
+            auto l0 = prog.add_literal({s, depth_input});
+            return prog.add_instruction(op::gather{0}, {l0, args[0]});
+        }
+        MIGRAPHX_THROW("MIGraphX does not support axis != -1");
     }
 
     void parse_from(std::istream& is)
