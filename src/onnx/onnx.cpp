@@ -1812,12 +1812,12 @@ struct onnx_parser
     {
         size_t depth = static_cast<size_t>(args[1]->eval().at<int32_t>());
 
-        int64_t axis    = -1;
-        std::vector<float>on_off_vals;
+        int64_t axis = -1;
+        std::vector<float> on_off_vals;
 
-        migraphx::argument on_off_arg  = args[2]->eval();
+        migraphx::argument on_off_arg = args[2]->eval();
         on_off_arg.visit([&](auto v) { copy(v, std::back_inserter(on_off_vals)); });
-        float on_value = on_off_vals[0];
+        float on_value  = on_off_vals[0];
         float off_value = on_off_vals[1];
 
         std::vector<float> depth_input(depth * depth, off_value);
