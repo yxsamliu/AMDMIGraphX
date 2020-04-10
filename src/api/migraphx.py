@@ -170,6 +170,21 @@ def program(h):
              const=True)
 
 
+@auto_handle
+def onnx_options(h):
+    h.constructor('create')
+    h.method(
+        'add_parameter_shape',
+        api.params(name='const char*', dim_num='size_t', dims='size_t*'),
+        invoke='migraphx::add_parameter_shape($@)',
+    )
+    h.method(
+        'set_default_dim_value',
+        api.params(value='size_t'),
+        invoke='migraphx::set_default_dim_value($@)',
+    )
+
+
 api.add_function('migraphx_parse_onnx',
                  api.params(name='const char*',
                             options='migraphx::onnx_options'),
