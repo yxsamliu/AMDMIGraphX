@@ -8,7 +8,7 @@ def rocmtestnode(variant, name, body) {
             rm -rf build
             mkdir build
             cd build
-            CXX=${compiler} CXXFLAGS='-Werror -Wno-fallback' cmake ${flags} .. 
+            CXX=${compiler} CXXFLAGS='-Werror -Wno-fallback' cmake ${flags} -DAMDGPU_TARGETS=`/opt/rocm/bin/rocminfo | grep -o 'gfx.*\b' | head -n1` .. 
             CTEST_PARALLEL_LEVEL=32 make -j\$(nproc) generate all doc package check
         """
         echo cmd
