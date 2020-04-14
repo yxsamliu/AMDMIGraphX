@@ -36,9 +36,9 @@ void rewrite_batchnorm::apply(program& p) const
         visit_all(gamma, bias, mean, variance, a, b)(
             [&](auto gamma2, auto bias2, auto mean2, auto variance2, auto a2, auto b2) {
                 dfor(a.get_shape().elements())(
-                    [&](std::size_t c) { a2[c] = gamma2[c] / std::sqrt(variance2[c] + epsilon); });
+                    [&](std::size_t c) { a2[c] = double(gamma2[c]) / std::sqrt(double(variance2[c]) + epsilon); });
                 dfor(b.get_shape().elements())([&](std::size_t c) {
-                    b2[c] = bias2[c] - (gamma2[c] * mean2[c] / std::sqrt(variance2[c] + epsilon));
+                    b2[c] = double(bias2[c]) - (double(gamma2[c]) * double(mean2[c]) / std::sqrt(double(variance2[c]) + epsilon));
                 });
             });
 
