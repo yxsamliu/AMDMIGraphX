@@ -43,7 +43,6 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y --allow-
     rocm-device-libs \
     rocm-opencl \
     rocm-opencl-dev \
-    rocminfo \
     software-properties-common \
     wget \
     zlib1g-dev && \
@@ -80,7 +79,7 @@ RUN ln -s $PREFIX /opt/rocm/hcc
 # Install dependencies
 ADD dev-requirements.txt /dev-requirements.txt
 ADD requirements.txt /requirements.txt
-RUN cget -p $PREFIX install -f /dev-requirements.txt -DMIOPEN_CACHE_DIR=""
+RUN cget -p $PREFIX install -f /dev-requirements.txt -DMIOPEN_CACHE_DIR="" --verbose
 
 ENV MIOPEN_FIND_DB_PATH=/tmp/miopen/find-db
 ENV MIOPEN_USER_DB_PATH=/tmp/miopen/user-db
