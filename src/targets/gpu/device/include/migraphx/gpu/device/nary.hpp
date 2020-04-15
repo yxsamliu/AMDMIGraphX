@@ -37,7 +37,7 @@ auto nary_nonstandard_nonpacked_impl(hipStream_t stream, F f, argument result, A
     shape s{result.get_shape().type(), result.get_shape().lens()};
     hip_visit_all(s, result, args...)([&](auto standard_shape, auto output, auto... inputs) {
         mi_gs_launch(stream,
-                     standard_shape)([=](auto idx) __device__ { output[idx] = f(inputs[idx]...); });
+                     standard_shape)([=](auto idx) { output[idx] = f(inputs[idx]...); });
     });
 }
 
@@ -46,7 +46,7 @@ inline auto create_broadcast_index(index_int len, index_int stride)
     auto next_stride   = stride * len;
     auto e_next_stride = encode_divisor(next_stride);
     auto e_stride      = encode_divisor(stride);
-    return [=](auto i) __device__ {
+    return [=](auto i) {
         // ( i % next_stride) / stride
         return fast_div(i, e_stride) - len * fast_div(i, e_next_stride);
     };
@@ -65,7 +65,7 @@ auto nary_nonstandard_packed_impl(hipStream_t stream,
     hip_visit_all(s, result.reshape(reorder_shape(result.get_shape(), perm)), args.reshape(s)...)(
         [&](auto standard_shape, auto output, auto... inputs) {
             mi_gs_launch(stream, standard_shape)(
-                [=](auto idx) __device__ { output[idx] = f(inputs[idx]...); });
+                [=](auto idx) { output[idx] = f(inputs[idx]...); });
         });
 }
 
@@ -93,7 +93,7 @@ void nary_broadcast_vec_impl(
         [&](auto output, auto binput, auto... inputs) {
             using type                = typename decltype(output)::value_type;
             const index_int nelements = output.size() / vec_size;
-            launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
+            launch(stream, nglobal, nlocal)([=](auto idx) {
                 MIGRAPHX_DEVICE_SHARED type buffer[2048 / vec_size];
                 // Load bias into LDS
                 for(size_t i = idx.local; i < bdim_vec_len; i += nlocal)
@@ -138,7 +138,7 @@ void nary_broadcast_impl(hipStream_t stream, F f, argument result, argument barg
     index_int nelements     = result.get_shape().elements();
     hip_visit_all(result, barg, args...)([&](auto output, auto binput, auto... inputs) {
         using type = typename decltype(output)::value_type;
-        launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
+        launch(stream, nglobal, nlocal)([=](auto idx) {
             MIGRAPHX_DEVICE_SHARED type buffer[2048];
             // Load bias into LDS
             for(size_t i = idx.local; i < bdim_len; i += nlocal)
@@ -184,7 +184,7 @@ void nary_double_broadcast_vec_impl(
         [&](auto output, auto binput1, auto binput2, auto... inputs) {
             using type                = typename decltype(output)::value_type;
             const index_int nelements = output.size() / vec_size;
-            launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
+            launch(stream, nglobal, nlocal)([=](auto idx) {
                 MIGRAPHX_DEVICE_SHARED type buffer[2048 / vec_size];
                 // Load bias into LDS
                 for(size_t i = idx.local; i < bdim_vec_len; i += nlocal)
@@ -239,7 +239,7 @@ void nary_double_broadcast_impl(
     hip_visit_all(result, barg1, barg2, args...)(
         [&](auto output, auto binput1, auto binput2, auto... inputs) {
             using type = typename decltype(output)::value_type;
-            launch(stream, nglobal, nlocal)([=](auto idx) __device__ {
+            launch(stream, nglobal, nlocal)([=](auto idx) {
                 MIGRAPHX_DEVICE_SHARED type buffer[2048];
                 // Load bias into LDS
                 for(size_t i = idx.local; i < bdim_len; i += nlocal)
@@ -273,7 +273,7 @@ void nary_standard_vec_impl(hipStream_t stream, F f, argument result, Arguments.
         const index_int vec_size = 4;
         auto data                = pack_vec<4>(device_cast(inputs.data())...);
         auto* outp               = as_vec<4>(device_cast(output.data()));
-        gs_launch(stream, output_shape.elements() / vec_size)([=](auto i) __device__ {
+        gs_launch(stream, output_shape.elements() / vec_size)([=](auto i) {
             vec<type, 4> out = outp[i];
             data(
                 [&](auto... xs) {
@@ -294,7 +294,7 @@ void nary_standard_impl(hipStream_t stream, F f, argument result, Arguments... a
     MIGRAPHX_TRACE_NARY_FUNCTION
     index_int nelements = result.get_shape().elements();
     hip_pointer_visit_all(result, args...)([&](auto output, auto... inputs) {
-        gs_launch(stream, nelements)([=](auto i) __device__ { output[i] = f(inputs[i]...); });
+        gs_launch(stream, nelements)([=](auto i) { output[i] = f(inputs[i]...); });
     });
 }
 

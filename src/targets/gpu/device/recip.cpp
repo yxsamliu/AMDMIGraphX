@@ -9,7 +9,7 @@ namespace device {
 
 void recip(hipStream_t stream, const argument& result, const argument& arg)
 {
-    nary(stream, result, arg)([](auto x) __device__ { return 1 / x; });
+    nary(stream, result, arg)([](auto x) { return 1 / x; });
 }
 
 } // namespace device

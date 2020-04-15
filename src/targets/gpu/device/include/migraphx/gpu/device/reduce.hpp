@@ -223,7 +223,7 @@ __device__ auto block_reduce(index idx, Op op, T init, index_int n, F f)
     auto fs = midx.id;
     fs[0]   = n;
     return block_reduce<N>(
-        idx, op, init, midx.for_stride(fs), [&](auto mi) __device__ { return f(mi[0]); });
+        idx, op, init, midx.for_stride(fs), [&](auto mi) { return f(mi[0]); });
 }
 
 #endif
@@ -251,10 +251,10 @@ void reduce_multi_impl(hipStream_t stream,
         const index_int max_block_size = 256;
         const index_int block_size     = compute_block_size(relements, max_block_size);
         mi_launch(stream, output.get_shape(), reduce_shape, block_size)(
-            [=](auto idx, auto global, auto local) __device__ {
-                global([&](auto i) __device__ {
+            [=](auto idx, auto global, auto local) {
+                global([&](auto i) {
                     auto r =
-                        block_reduce<max_block_size>(idx, op, init, local, [&](auto j) __device__ {
+                        block_reduce<max_block_size>(idx, op, init, local, [&](auto j) {
                             return read_input(input[i + j]);
                         });
                     if(idx.local == 0)
@@ -279,10 +279,10 @@ void reduce_standard_impl(hipStream_t stream,
 
         const index_int max_block_size = 256;
         const index_int block_size     = compute_block_size(relements, max_block_size);
-        gs_launch(stream, nelements * block_size, block_size)([=](auto i, auto idx) __device__ {
+        gs_launch(stream, nelements * block_size, block_size)([=](auto i, auto idx) {
             const auto out_idx  = i / block_size;
             const auto base_idx = out_idx * relements;
-            auto r = block_reduce<max_block_size>(idx, op, init, relements, [&](auto j) __device__ {
+            auto r = block_reduce<max_block_size>(idx, op, init, relements, [&](auto j) {
                 return read_input(input.data()[base_idx + j]);
             });
             if(idx.local == 0)
