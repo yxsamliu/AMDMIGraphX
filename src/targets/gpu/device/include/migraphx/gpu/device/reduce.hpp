@@ -222,8 +222,7 @@ __device__ auto block_reduce(index idx, Op op, T init, index_int n, F f)
     // Workaround hcc, create a local array
     auto fs = midx.id;
     fs[0]   = n;
-    return block_reduce<N>(
-        idx, op, init, midx.for_stride(fs), [&](auto mi) { return f(mi[0]); });
+    return block_reduce<N>(idx, op, init, midx.for_stride(fs), [&](auto mi) { return f(mi[0]); });
 }
 
 #endif
@@ -253,10 +252,8 @@ void reduce_multi_impl(hipStream_t stream,
         mi_launch(stream, output.get_shape(), reduce_shape, block_size)(
             [=](auto idx, auto global, auto local) {
                 global([&](auto i) {
-                    auto r =
-                        block_reduce<max_block_size>(idx, op, init, local, [&](auto j) {
-                            return read_input(input[i + j]);
-                        });
+                    auto r = block_reduce<max_block_size>(
+                        idx, op, init, local, [&](auto j) { return read_input(input[i + j]); });
                     if(idx.local == 0)
                         output[i] = read_output(r);
                 });

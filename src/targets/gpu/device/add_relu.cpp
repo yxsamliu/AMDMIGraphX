@@ -11,8 +11,8 @@ void add_relu(hipStream_t stream,
               const argument& arg1,
               const argument& arg2)
 {
-    nary(stream, result, arg1, arg2)([](auto x, auto y)
-                                         { return ::max<decltype(x + y)>(0, x + y); });
+    nary(stream, result, arg1, arg2)(
+        [](auto x, auto y) { return ::max<decltype(x + y)>(0, x + y); });
 }
 
 void add_relu(hipStream_t stream,

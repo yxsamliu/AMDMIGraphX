@@ -11,8 +11,7 @@ void add_tanh(hipStream_t stream,
               const argument& arg1,
               const argument& arg2)
 {
-    nary(stream, result, arg1, arg2)([](auto x, auto y)
-                                         { return ::tanh(to_hip_type(x + y)); });
+    nary(stream, result, arg1, arg2)([](auto x, auto y) { return ::tanh(to_hip_type(x + y)); });
 }
 
 void add_tanh(hipStream_t stream,
