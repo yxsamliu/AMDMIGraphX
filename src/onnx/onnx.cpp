@@ -814,13 +814,14 @@ struct onnx_parser
             literal s = parse_value(info.attributes.at("starts"));
             s.visit([&](auto v) { copy(v, std::back_inserter(op.starts)); });
         }
-        auto lens = args[0]->get_shape().lens();
+
         if(op.axes.empty())
         {
-            std::vector<int64_t> axes(lens.size());
+            std::vector<int64_t> axes(args[0]->get_shape().lens().size());
             std::iota(axes.begin(), axes.end(), int64_t{0});
             op.axes = axes;
         }
+
         return prog.add_instruction(op, args[0]);
     }
 
@@ -1810,15 +1811,18 @@ struct onnx_parser
     instruction_ref
     parse_onehot(const std::string&, node_info info, std::vector<instruction_ref> args)
     {
-        size_t depth = static_cast<size_t>(args[1]->eval().at<int32_t>());
+        migraphx::argument depth_arg = args[1]->eval();
+        check_arg_empty(depth_arg, "ONEHOT: depth - dynamic shape not supported");
+        size_t depth = depth_arg.at<size_t>();
 
         int64_t axis = -1;
         std::vector<float> on_off_vals;
 
-        migraphx::argument on_off_arg = args[2]->eval();
-        on_off_arg.visit([&](auto v) { copy(v, std::back_inserter(on_off_vals)); });
-        float on_value  = on_off_vals[0];
-        float off_value = on_off_vals[1];
+        migraphx::argument values_arg = args[2]->eval();
+        check_arg_empty(values_arg, "ONEHOT: values - dynamic shape not supported");
+        values_arg.visit([&](auto v) { copy(v, std::back_inserter(on_off_vals)); });
+        float off_value = on_off_vals[0];
+        float on_value  = on_off_vals[1];
 
         std::vector<float> depth_input(depth * depth, off_value);
         for(int i = 0; i < depth; i++)
@@ -1834,7 +1838,7 @@ struct onnx_parser
             auto l0 = prog.add_literal({s, depth_input});
             return prog.add_instruction(op::gather{0}, {l0, args[0]});
         }
-        MIGRAPHX_THROW("MIGraphX does not support axis != -1");
+        MIGRAPHX_THROW("ONEHOT: MIGraphX does not support axis != -1");
     }
 
     void parse_from(std::istream& is)
