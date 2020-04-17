@@ -461,7 +461,7 @@ struct cpu_pad
     {
         assert(output_shape.standard());
         argument result{output_shape};
-        
+
         result.visit([&](auto output) {
             using type = typename decltype(output)::value_type;
             type pad_val{0};
@@ -470,8 +470,8 @@ struct cpu_pad
                 pad_val = std::numeric_limits<type>::lowest();
             }
             std::cout << pad_val << std::endl;
-            std::fill(output.begin(), output.end(), pad_val); 
-            });
+            std::fill(output.begin(), output.end(), pad_val);
+        });
 
         visit_all(result, args[0])([&](auto output, auto input) {
             shape_for_each(input.get_shape(), [&](const auto& idx) {
