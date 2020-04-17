@@ -231,6 +231,20 @@ def averagepool_same_upper_test():
 
 
 @onnx_test
+def averagepool_half_test():
+    x = helper.make_tensor_value_info('x', TensorProto.FLOAT16, [1, 1, 6, 6])
+    y = helper.make_tensor_value_info('y', TensorProto.FLOAT16, [1, 1, 1, 1])
+
+    node = onnx.helper.make_node('AveragePool',
+                                 inputs=['x'],
+                                 outputs=['y'],
+                                 kernel_shape=[7, 7],
+                                 auto_pad='SAME_UPPER')
+
+    return ([node], [x], [y])
+
+
+@onnx_test
 def cast_test():
     x = helper.make_tensor_value_info('x', TensorProto.FLOAT16, [10])
     y = helper.make_tensor_value_info('y', TensorProto.FLOAT, [10])
@@ -1371,6 +1385,20 @@ def maxpool_notset_test():
 def maxpool_same_upper_test():
     x = helper.make_tensor_value_info('x', TensorProto.FLOAT, [1, 1, 5, 5])
     y = helper.make_tensor_value_info('y', TensorProto.FLOAT, [1, 1, 5, 5])
+
+    node = onnx.helper.make_node('MaxPool',
+                                 inputs=['x'],
+                                 outputs=['y'],
+                                 kernel_shape=[2, 2],
+                                 auto_pad='SAME_UPPER')
+
+    return ([node], [x], [y])
+
+
+@onnx_test
+def maxpool_half_test():
+    x = helper.make_tensor_value_info('x', TensorProto.FLOAT16, [1, 1, 5, 5])
+    y = helper.make_tensor_value_info('y', TensorProto.FLOAT16, [1, 1, 5, 5])
 
     node = onnx.helper.make_node('MaxPool',
                                  inputs=['x'],

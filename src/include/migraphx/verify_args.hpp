@@ -55,10 +55,20 @@ inline bool verify_args(const std::string& name,
         else
         {
             if(range_zero(cpu))
+            {
                 std::cout << "Cpu data is all zeros" << std::endl;
+            }
             if(range_zero(gpu))
                 std::cout << "Gpu data is all zeros" << std::endl;
 
+            std::cout << "cpu:";
+            for(int i = 0; i < 10 and i < cpu.size(); i++)
+                std::cout << " " << cpu[i];
+            std::cout << std::endl;
+            std::cout << "gpu:";
+            for(int i = 0; i < 10 and i < gpu.size(); i++)
+                std::cout << " " << gpu[i];
+            std::cout << std::endl;
             // auto mxdiff = max_diff(cpu, gpu);
             // std::cout << "Max diff: " << mxdiff << std::endl;
 

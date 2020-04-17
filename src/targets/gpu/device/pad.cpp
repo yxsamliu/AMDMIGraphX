@@ -21,7 +21,8 @@ pad(hipStream_t stream, argument result, argument arg1, float value, std::vector
         type device_val = value;
         if(float_equal(value, std::numeric_limits<float>::lowest()))
         {
-            device_val = device_cast(std::numeric_limits<type>::lowest());
+            device_val = device_cast(std::numeric_limits<type>::lowest() + std::numeric_limits<type>::epsilon());
+            device_val = -128;
         }
         gs_launch(stream, result.get_shape().elements())(
             [=](auto i) __device__ { output.data()[i] = device_val; });

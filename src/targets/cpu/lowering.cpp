@@ -24,6 +24,8 @@
 #include <migraphx/cpu/gemm.hpp>
 #include <unordered_map>
 #include <utility>
+#include <migraphx/float_equal.hpp>
+#include <iostream>
 
 namespace migraphx {
 inline namespace MIGRAPHX_INLINE_NS {
@@ -453,13 +455,23 @@ struct cpu_pad
         return migraphx::reflect(self.op, f);
     }
 
-    std::string name() const { return "cpu::contiguous"; }
+    std::string name() const { return "cpu::pad"; }
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
     argument compute(context&, const shape& output_shape, std::vector<argument> args) const
     {
         assert(output_shape.standard());
         argument result{output_shape};
-        result.visit([&](auto output) { std::fill(output.begin(), output.end(), op.value); });
+        
+        result.visit([&](auto output) {
+            using type = typename decltype(output)::value_type;
+            type pad_val{0};
+            if(float_equal(op.value, std::numeric_limits<float>::lowest()))
+            {
+                pad_val = std::numeric_limits<type>::lowest();
+            }
+            std::cout << pad_val << std::endl;
+            std::fill(output.begin(), output.end(), pad_val); 
+            });
 
         visit_all(result, args[0])([&](auto output, auto input) {
             shape_for_each(input.get_shape(), [&](const auto& idx) {
