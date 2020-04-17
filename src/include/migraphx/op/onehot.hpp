@@ -32,7 +32,7 @@ struct onehot
     shape compute_shape(std::vector<shape> inputs) const
     {
         check_shapes{inputs, *this}.has(2).standard();
-        auto lens = inputs[0].lens();
+        auto lens  = inputs[0].lens();
         int n_rank = static_cast<int>(lens.size());
         if(axis > n_rank || axis < -(n_rank + 1))
         {
@@ -61,19 +61,20 @@ struct onehot
             std::vector<type> vec_values;
             vec_values.assign(value.begin(), value.end());
             type off_value = vec_values.front();
-            type on_value = vec_values.back();
+            type on_value  = vec_values.back();
             std::fill(output.begin(), output.end(), off_value);
 
             args[0].visit([&](auto index_buf) {
                 shape_for_each(args[0].get_shape(), [&](const auto& in_idx) {
                     auto out_idex = in_idx;
-                    out_idx.insert(out_idx.begin() + turned_axis, index_buf(in_idx.begin(), in_idx.end()));
+                    out_idx.insert(out_idx.begin() + turned_axis,
+                                   index_buf(in_idx.begin(), in_idx.end()));
                     output[output_shape.index(out_idx.begin(), out_idx.end())] = on_value;
                 });
             });
         })
 
-        return result;
+            return result;
     }
 };
 
