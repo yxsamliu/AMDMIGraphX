@@ -18,8 +18,8 @@ namespace op {
 
 struct onehot
 {
-    int64_t depth;
-    int axis = -1;
+    std::size_t depth = 0;
+    int64_t axis = -1;
 
     template <class Self, class F>
     static auto reflect(Self& self, F f)
@@ -32,15 +32,25 @@ struct onehot
     shape compute_shape(std::vector<shape> inputs) const
     {
         check_shapes{inputs, *this}.has(2).standard();
+        if (depth == 0)
+        {
+            MIGRAPHX_THROW("ONEHOT: Attribute depth cannot be 0!");
+        }
+
+        if (inputs[1].elements() != 2)
+        {
+            MIGRAPHX_THROW("ONEHOT: value argument must contain 2 elements!");
+        }
+        
         auto lens  = inputs[0].lens();
-        int n_rank = static_cast<int>(lens.size());
+        int64_t n_rank = static_cast<int>(lens.size());
         if(axis > n_rank || axis < -(n_rank + 1))
         {
-            MIGRAPHX_THROW("ONEHOT: axis is out of range.");
+            MIGRAPHX_THROW("ONEHOT: Axis is out of range.");
         }
 
         // negative axis means counting dimensions from back
-        int tuned_axis = (axis < 0) ? (n_rank + 1 + axis) : axis;
+        int64_t tuned_axis = (axis < 0) ? (n_rank + 1 + axis) : axis;
 
         auto type = inputs[1].type();
         lens.insert(lens.begin() + tuned_axis, depth);
@@ -50,9 +60,9 @@ struct onehot
 
     argument compute(const shape& output_shape, std::vector<argument> args) const
     {
-        int n_rank = static_cast<int>(args[0].get_shape().lens().size());
+        int64_t n_rank = static_cast<int>(output_shape.lens().size());
         // negative axis means counting dimensions from back
-        int tuned_axis = (axis < 0) ? (n_rank + 1 + axis) : axis;
+        int64_t tuned_axis = (axis < 0) ? (n_rank + axis) : axis;
 
         argument result{output_shape};
         // get the off_value and on_value
@@ -67,8 +77,9 @@ struct onehot
             args[0].visit([&](auto index_buf) {
                 shape_for_each(args[0].get_shape(), [&](const auto& in_idx) {
                     auto out_idx = in_idx;
-                    out_idx.insert(out_idx.begin() + tuned_axis,
-                                   index_buf(in_idx.begin(), in_idx.end()));
+                    int64_t axis_index = static_cast<int64_t>(index_buf(in_idx.begin(), in_idx.end()));
+                    axis_index = (axis_index < 0) ? (axis_index + depth) : axis_index;
+                    out_idx.insert(out_idx.begin() + tuned_axis, axis_index);
                     output[output_shape.index(out_idx.begin(), out_idx.end())] = on_value;
                 });
             });
