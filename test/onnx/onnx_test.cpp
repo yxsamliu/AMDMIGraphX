@@ -1105,7 +1105,7 @@ TEST_CASE(onehot_test)
     migraphx::shape s_val{migraphx::shape::half_type, {2}};
     auto l_ind = p.add_parameter("indices", s_ind);
     auto l_val = p.add_parameter("values", s_val);
-    int axis = 0;
+    int axis   = 0;
     p.add_instruction(migraphx::op::onehot{3, axis}, l_ind, l_val);
     auto prog = optimize_onnx("onehot_test.onnx");
 

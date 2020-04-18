@@ -1414,7 +1414,8 @@ def no_pad_test():
 def onehot_test():
     axis_value = 0
     depth = np.array([3])
-    indices = helper.make_tensor_value_info("indices", TensorProto.INT32, [5, 2])
+    indices = helper.make_tensor_value_info("indices", TensorProto.INT32,
+                                            [5, 2])
     values = helper.make_tensor_value_info("values", TensorProto.FLOAT16, [2])
     y = helper.make_tensor_value_info('1', TensorProto.FLOAT16, [3, 5, 2])
 
@@ -1429,6 +1430,7 @@ def onehot_test():
                                  axis=axis_value)
 
     return ([node], [indices, values], [y], [depth_tensor])
+
 
 @onnx_test
 def pad_test():

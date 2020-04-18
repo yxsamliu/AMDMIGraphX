@@ -19,7 +19,7 @@ namespace op {
 struct onehot
 {
     std::size_t depth = 0;
-    int64_t axis = -1;
+    int64_t axis      = -1;
 
     template <class Self, class F>
     static auto reflect(Self& self, F f)
@@ -32,17 +32,17 @@ struct onehot
     shape compute_shape(std::vector<shape> inputs) const
     {
         check_shapes{inputs, *this}.has(2).standard();
-        if (depth == 0)
+        if(depth == 0)
         {
             MIGRAPHX_THROW("ONEHOT: Attribute depth cannot be 0!");
         }
 
-        if (inputs[1].elements() != 2)
+        if(inputs[1].elements() != 2)
         {
             MIGRAPHX_THROW("ONEHOT: value argument must contain 2 elements!");
         }
-        
-        auto lens  = inputs[0].lens();
+
+        auto lens      = inputs[0].lens();
         int64_t n_rank = static_cast<int>(lens.size());
         if(axis > n_rank || axis < -(n_rank + 1))
         {
@@ -77,7 +77,8 @@ struct onehot
             args[0].visit([&](auto index_buf) {
                 shape_for_each(args[0].get_shape(), [&](const auto& in_idx) {
                     auto out_idx = in_idx;
-                    int64_t axis_index = static_cast<int64_t>(index_buf(in_idx.begin(), in_idx.end()));
+                    int64_t axis_index =
+                        static_cast<int64_t>(index_buf(in_idx.begin(), in_idx.end()));
                     axis_index = (axis_index < 0) ? (axis_index + depth) : axis_index;
                     out_idx.insert(out_idx.begin() + tuned_axis, axis_index);
                     output[output_shape.index(out_idx.begin(), out_idx.end())] = on_value;
