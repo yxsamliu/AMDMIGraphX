@@ -50,13 +50,13 @@ struct onehot
 
     argument compute(const shape& output_shape, std::vector<argument> args) const
     {
-        int n_rank = static_cast<int>(args[0].get_shape().lens());
+        int n_rank = static_cast<int>(args[0].get_shape().lens().size());
         // negative axis means counting dimensions from back
         int tuned_axis = (axis < 0) ? (n_rank + 1 + axis) : axis;
 
         argument result{output_shape};
         // get the off_value and on_value
-        visit_all(result, args[1])([](auto output, auto value) {
+        visit_all(result, args[1])([=](auto output, auto value) {
             using type = typename decltype(value)::value_type;
             std::vector<type> vec_values;
             vec_values.assign(value.begin(), value.end());
@@ -66,15 +66,15 @@ struct onehot
 
             args[0].visit([&](auto index_buf) {
                 shape_for_each(args[0].get_shape(), [&](const auto& in_idx) {
-                    auto out_idex = in_idx;
-                    out_idx.insert(out_idx.begin() + turned_axis,
+                    auto out_idx = in_idx;
+                    out_idx.insert(out_idx.begin() + tuned_axis,
                                    index_buf(in_idx.begin(), in_idx.end()));
                     output[output_shape.index(out_idx.begin(), out_idx.end())] = on_value;
                 });
             });
-        })
+        });
 
-            return result;
+        return result;
     }
 };
 
