@@ -19,7 +19,6 @@ namespace op {
 struct pad
 {
     std::vector<int64_t> pads;
-    float value = 0.0f;
     enum pad_op_mode_t
     {
         constant_pad,
@@ -31,24 +30,28 @@ struct pad
     template <class Self, class F>
     static auto reflect(Self& self, F f)
     {
-        return pack(f(self.mode, "mode"), f(self.pads, "pads"), f(self.value, "value"));
+        return pack(f(self.mode, "mode"), f(self.pads, "pads"));
     }
 
     std::string name() const { return "pad"; }
     shape compute_shape(std::vector<shape> inputs) const
     {
-        check_shapes{inputs, *this}.has(1);
+        check_shapes{inputs, *this}.standard();
         auto&& idims = inputs.front().lens();
         std::vector<std::size_t> rdims(idims.begin(), idims.end());
         std::size_t num_dims = rdims.size();
+
+        if (num_dims * 2 != pads.size())
+        {
+            MIGRAPHX_THROW("PAD: pad dims must be 2 times of input dims")
+        }
 
         for(std::size_t i = 0; i < num_dims; i++)
         {
             rdims[i] += pads[i] + pads[i + num_dims];
         }
 
-        shape s{inputs.front().type(), rdims};
-        return s;
+        return {inputs.front().type(), rdims};
     }
 
     bool symmetric() const
