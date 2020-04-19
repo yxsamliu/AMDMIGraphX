@@ -457,33 +457,36 @@ struct cpu_pad
     shape compute_shape(const std::vector<shape>& inputs) const { return op.compute_shape(inputs); }
     inline void shift_point(auto& idx, const std::vector<std::size_t>& shift)
     {
-        std::transform(idx.begin(), idx.end(), shift.start(),
-                       idx.begin(), [](auto i, auto j) { return i - j; });
+        std::transform(idx.begin(), idx.end(), shift.start(), idx.begin(), [](auto i, auto j) {
+            return i - j;
+        });
     }
 
-    inline void reflect_idx(auto& idx, 
-                            const std::vector<std::size_t>& in_loc_start, 
+    inline void reflect_idx(auto& idx,
+                            const std::vector<std::size_t>& in_loc_start,
                             const std::vector<std::size_t>& in_loc_end)
     {
         std::vector<std::size_t> vec_dims(in_loc_end.size());
-        std::transform(in_loc_end.begin(), in_loc_start.end(),
-                       in_loc_start.begin(), vec_dims.begin(),
+        std::transform(in_loc_end.begin(),
+                       in_loc_start.end(),
+                       in_loc_start.begin(),
+                       vec_dims.begin(),
                        [](auto i, auto j) { return i - j; });
         std::size_t n_dim = in_loc_start.size();
-        for (size_t i = 0; i < n_dim; ++)
+        for(size_t i = 0; i < n_dim; ++)
         {
-            if (vec_dims[i] == 1)
+            if(vec_dims[i] == 1)
             {
                 idx[i] = 0;
             }
             else
             {
                 std::size_t size = vec_dims[i] - 1;
-                if (idx[i] < in_loc_start[i])
+                if(idx[i] < in_loc_start[i])
                 {
                     auto delta = in_loc_start[i] - idx[i];
                     auto index = delta % (2 * size);
-                    if (index > size)
+                    if(index > size)
                     {
                         idx[i] = 2 * size - index;
                     }
@@ -492,11 +495,11 @@ struct cpu_pad
                         idx[i] = index;
                     }
                 }
-                else if (idx[i] >= in_loc_end[i])
+                else if(idx[i] >= in_loc_end[i])
                 {
                     auto delta = idx[i] - (in_loc_end[i] - 1);
                     auto index = delta % (2 * size);
-                    if (index < size)
+                    if(index < size)
                     {
                         idx[i] = size - index;
                     }
@@ -523,10 +526,10 @@ struct cpu_pad
         auto in_loc_end(n_dim);
         std::copy(op.pads.begin(), op.pads.begin() + n_dim, in_loc_start.begin());
         std::transform(op.pads.begin(),
-                        op.pads.begin() + n_dim,
-                        in_lens.begin(),
-                        in_loc_end.begin(),
-                        [](auto i, auto i) { return i + j; });
+                       op.pads.begin() + n_dim,
+                       in_lens.begin(),
+                       in_loc_end.begin(),
+                       [](auto i, auto i) { return i + j; });
         if(op.mode == constant_pad)
         {
             visit_all(result, args[0])([&](auto output, auto input) {
@@ -539,13 +542,15 @@ struct cpu_pad
                 par_for(output_shape, [&](const auto& ii) {
                     auto idx = output_shape.multi(ii);
                     std::vector<std::size_t> new_idx(idx.size());
-                    auto out_val = value;
+                    auto out_val      = value;
                     bool inside_input = true;
-                    for (std::size_t i_dim = 0; i_dim < n_dim; ++i_dim)
+                    for(std::size_t i_dim = 0; i_dim < n_dim; ++i_dim)
                     {
-                        inside_input &= (idx[i_dim] >= in_loc_start[i_dim]) and (idx[i_dim] < in_loc_end[i_dim]);
+                        inside_input &= (idx[i_dim] >= in_loc_start[i_dim]) and
+                                        (idx[i_dim] < in_loc_end[i_dim]);
                     }
-                    if (inside_input) {
+                    if(inside_input)
+                    {
                         auto in_idx = idx;
                         this->shift_point(in_idx, in_loc_start);
                         out_val = input(in_idx.begin(), in_idx.end());
@@ -558,7 +563,7 @@ struct cpu_pad
         {
             visit_all(result, args[0])([&](auto output, auto input) {
                 par_for(output.get_shape(), [&](const auto& ii) {
-                    auto idx = output_shape.multi(ii);
+                    auto idx    = output_shape.multi(ii);
                     auto in_idx = idx;
                     this->reflect_idx(in_idx, in_loc_start, in_loc_end);
                     output[ii] = input(in_idx.begin(), in_idx.end());
@@ -569,7 +574,7 @@ struct cpu_pad
         {
             visit_all(result, args[0])([&](auto output, auto input) {
                 par_for(output.get_shape(), [&](const auto& ii) {
-                    auto idx = output_shape.multi(ii);
+                    auto idx    = output_shape.multi(ii);
                     auto in_idx = idx;
                     std::transform(idx.begin(),
                                    idx.end(),
