@@ -484,16 +484,15 @@ struct cpu_pad
         }
         else if(op.mode == reflect_pad)
         {
-
         }
         else // edge mode
         {
-            auto in_lens = args[0].get_shape().lens();
+            auto in_lens      = args[0].get_shape().lens();
             std::size_t n_dim = in_lens.size();
             auto in_loc_start(n_dim);
             auto in_loc_end(n_dim);
             std::copy(op.pads.begin(), op.pads.begin() + n_dim, in_loc_start.begin());
-            std::transform(op.pads.begin(), 
+            std::transform(op.pads.begin(),
                            op.pads.begin() + n_dim,
                            in_lens.begin(),
                            in_loc_end.begin(),
@@ -501,19 +500,18 @@ struct cpu_pad
             visit_all(result, args[0])([&](auto output, auto input) {
                 shape_for_each(output.get_shape(), [&](const auto& idx) {
                     auto in_idx = idx;
-                    std::transform(idx.begin(), idx.end(),
+                    std::transform(idx.begin(),
+                                   idx.end(),
                                    in_loc_start.begin(),
                                    in_idx.begin(),
-                                   [](auto i, auto j) {
-                                       return (i < j) ? j : i; 
-                                   });
-                    std::transform(in_idx.begin(), in_idx.end(),
+                                   [](auto i, auto j) { return (i < j) ? j : i; });
+                    std::transform(in_idx.begin(),
+                                   in_idx.end(),
                                    in_loc_end.begin(),
                                    in_idx.begin(),
-                                   [](auto i, auto j) {
-                                       return (i >= j) ? j - 1: i; 
-                                   });
-                    std::transform(in_idx.begin(), in_idx.end(),
+                                   [](auto i, auto j) { return (i >= j) ? j - 1 : i; });
+                    std::transform(in_idx.begin(),
+                                   in_idx.end(),
                                    in_loc_start.begin(),
                                    in_idx.begin(),
                                    [](auto i, auto j) { return i - j; });
