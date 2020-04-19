@@ -41,7 +41,7 @@ struct pad
         std::vector<std::size_t> rdims(idims.begin(), idims.end());
         std::size_t num_dims = rdims.size();
 
-        if (num_dims * 2 != pads.size())
+        if(num_dims * 2 != pads.size())
         {
             MIGRAPHX_THROW("PAD: pad dims must be 2 times of input dims")
         }
