@@ -16,15 +16,16 @@ shape hip_pad::compute_shape(std::vector<shape> inputs) const
 
 argument hip_pad::compute(context& ctx, const shape&, const std::vector<argument>& args) const
 {
-    // the input pad value is availabel
-    std:vector<argument> inputs(args);
+// the input pad value is availabel
+std:
+    vector<argument> inputs(args);
     inputs.pop_back();
 
-    if (op.mode == constant_pad)
+    if(op.mode == constant_pad)
     {
         return device::pad_constant(ctx.get_stream().get(), args.back(), inputs, op.pads);
     }
-    else if (op.mode == reflect_pad)
+    else if(op.mode == reflect_pad)
     {
         return device::pad_reflect(ctx.get_stream().get(), args.back(), inputs, op.pads);
     }

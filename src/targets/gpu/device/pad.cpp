@@ -11,13 +11,15 @@ inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 namespace device {
 
-argument
-pad_constant(hipStream_t stream, argument result, const std::vector<argument>& args, const std::vector<std::int64_t>& pads)
+argument pad_constant(hipStream_t stream,
+                      argument result,
+                      const std::vector<argument>& args,
+                      const std::vector<std::int64_t>& pads)
 {
     hip_visit_all(result, arg[0])([&](auto output, auto input) {
         using hip_index = typename decltype(output)::hip_index;
-        
-        if (args.size() == 2)
+
+        if(args.size() == 2)
         {
             args[1].visit([&](auto val) {
                 const auto* val_ptr = device_cast(val.data());
@@ -25,7 +27,8 @@ pad_constant(hipStream_t stream, argument result, const std::vector<argument>& a
                     [=](auto i) __device__ { output.data()[i] = val_ptr[0]; });
             })
         }
-        else {
+        else
+        {
             gs_launch(stream, result.get_shape().elements())(
                 [=](auto i) __device__ { output.data()[i] = 0; });
         }
@@ -46,22 +49,24 @@ pad_constant(hipStream_t stream, argument result, const std::vector<argument>& a
     return result;
 }
 
-argument
-pad_edge(hipStream_t stream, argument result, const std::vector<argument>& args, const std::vector<std::int64_t>& pads)
+argument pad_edge(hipStream_t stream,
+                  argument result,
+                  const std::vector<argument>& args,
+                  const std::vector<std::int64_t>& pads)
 {
     std::size_t nelements = result.get_shape().elements();
-    auto in_lens = args[0].get_shape().lens();
+    auto in_lens          = args[0].get_shape().lens();
     hip_visit_all(result, arg[0], result.get_shape())([&](auto output, auto input, auto out_s) {
         gs_launch(stream, nelements)([=](auto i) __device__ {
-            auto idx = out_s.multi(i);
+            auto idx    = out_s.multi(i);
             auto in_idx = idx;
             for(std::size_t j = 0; j < idx.size(); ++j)
             {
-                if (in_idx[j] < pads[j])
+                if(in_idx[j] < pads[j])
                 {
                     in_idx[j] = 0;
                 }
-                else if (in_idx[j] >= pads[j] and in_idx[j] < pads[j] + in_lens[j])
+                else if(in_idx[j] >= pads[j] and in_idx[j] < pads[j] + in_lens[j])
                 {
                     in_idx[j] = idx[j] - pads[j];
                 }
@@ -77,13 +82,14 @@ pad_edge(hipStream_t stream, argument result, const std::vector<argument>& args,
     return result;
 }
 
-argument
-pad_reflect(hipStream_t stream, argument result, const std::vector<argument>& args, const std::vector<std::int64_t>& pads)
+argument pad_reflect(hipStream_t stream,
+                     argument result,
+                     const std::vector<argument>& args,
+                     const std::vector<std::int64_t>& pads)
 {
     auto reflect_idx = [](auto& idx,
                           const std::vector<std::size_t>& in_loc_start,
-                          const std::vector<std::size_t>& in_loc_end)
-    {
+                          const std::vector<std::size_t>& in_loc_end) {
         std::vector<std::size_t> vec_dims(in_loc_end.size());
         std::transform(in_loc_end.begin(),
                        in_loc_start.end(),
@@ -136,21 +142,23 @@ pad_reflect(hipStream_t stream, argument result, const std::vector<argument>& ar
     };
 
     std::size_t nelements = result.get_shape().elements();
-    auto in_lens = args[0].get_shape().lens();
+    auto in_lens          = args[0].get_shape().lens();
     std::vector<std::size_t> in_loc_start(in_lens.size());
     std::copy(pads.begin(), pads.begin() + in_lens.size(), in_loc_start.begin());
-    std::transform(in_loc_start.begin(), in_loc_start.end(),
-                   in_lens.begin(), in_loc_end.begin(), 
+    std::transform(in_loc_start.begin(),
+                   in_loc_start.end(),
+                   in_lens.begin(),
+                   in_loc_end.begin(),
                    [](auto i, auto j) { return i + j; });
     hip_visit_all(result, arg[0], result.get_shape())([&](auto output, auto input, auto out_s) {
         gs_launch(stream, nelements)([=](auto i) __device__ {
-            auto idx = out_s.multi(i);
+            auto idx    = out_s.multi(i);
             auto in_idx = idx;
             reflect_idx(in_idx, in_loc_start, in_loc_end);
             output[idx] = input[in_idx];
         });
     });
-    
+
     return result;
 }
 
