@@ -11,12 +11,18 @@ inline namespace MIGRAPHX_INLINE_NS {
 namespace gpu {
 namespace device {
 
-argument pad(hipStream_t stream,
+argument pad_constant(hipStream_t stream,
              argument result,
-             argument arg1,
-             float value,
-             std::vector<std::int64_t> pads);
-
+             const std::vector<argument>& args,
+             const std::vector<std::int64_t>& pads);
+argument pad_edge(hipStream_t stream,
+             argument result,
+             const std::vector<argument>& args,
+             const std::vector<std::int64_t>& pads);
+argument pad_reflect(hipStream_t stream,
+             argument result,
+             const std::vector<argument>& args,
+             const std::vector<std::int64_t>& pads);
 } // namespace device
 } // namespace gpu
 } // namespace MIGRAPHX_INLINE_NS
